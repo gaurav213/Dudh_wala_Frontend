@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: NPM_CONFIG_REGISTRY=https://registry.npmjs.org npm ci
+
+      - name: Lint
+        run: NPM_CONFIG_REGISTRY=https://registry.npmjs.org npm run lint
+
+      - name: Test
+        run: NPM_CONFIG_REGISTRY=https://registry.npmjs.org npm test
+
+      - name: Build
+        run: NPM_CONFIG_REGISTRY=https://registry.npmjs.org npm run build
+        env:
+          VITE_APP_ENV: production
+          VITE_API_BASE_URL: https://api.example.com/api/v1
+          VITE_ENABLE_API_LOGS: 'false'
