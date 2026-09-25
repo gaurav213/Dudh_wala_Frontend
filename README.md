@@ -44,6 +44,16 @@ VITE_API_BASE_URL=http://localhost:3000/api/v1
 VITE_ENABLE_API_LOGS=true
 ```
 
+Production builds (`npm run build` / Vercel) use `.env.production`:
+
+```
+VITE_APP_ENV=production
+VITE_API_BASE_URL=https://dudh-wala-backend.onrender.com/api/v1
+VITE_ENABLE_API_LOGS=false
+```
+
+After the Vercel URL is live, add it to Render `CORS_ORIGINS` (comma-separated with any other web origins).
+
 ## Auth & tokens
 
 - Access and refresh tokens live **in memory** (`tokenStore`).

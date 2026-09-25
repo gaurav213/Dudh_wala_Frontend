@@ -44,6 +44,7 @@ import { PaymentsListPage } from '../features/payments/pages/PaymentsListPage'
 import { SettingsPage } from '../features/settings/pages/SettingsPage'
 import { SupplierDetailPage } from '../features/suppliers/pages/SupplierDetailPage'
 import { SuppliersListPage } from '../features/suppliers/pages/SuppliersListPage'
+import { InboxNotificationPoller } from '../features/notifications/InboxNotificationPoller'
 import { AuthProvider } from '../lib/auth/AuthContext'
 import { DELIVERY_STAFF_ENABLED } from '../config/featureFlags'
 
@@ -51,6 +52,7 @@ export function AppRouter() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <InboxNotificationPoller />
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register/farm-owner" element={<RegisterFarmOwnerPage />} />
