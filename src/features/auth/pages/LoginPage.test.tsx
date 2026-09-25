@@ -6,6 +6,7 @@ import { LoginPage } from './LoginPage'
 import { renderWithProviders } from '../../../test/test-utils'
 import * as authApiModule from '../api/authApi'
 import { tokenStore } from '../../../lib/auth/tokenStore'
+import { ApiError } from '../../../lib/api/errors'
 
 vi.mock('../api/authApi', () => ({
   authApi: {
@@ -32,7 +33,7 @@ describe('Login form', () => {
 
     await user.click(screen.getByRole('button', { name: /sign in/i }))
 
-    expect(await screen.findByText(/valid email/i)).toBeInTheDocument()
+    expect(await screen.findByText(/10-digit/i)).toBeInTheDocument()
     expect(screen.getByText(/at least 8 characters/i)).toBeInTheDocument()
     expect(authApiModule.authApi.login).not.toHaveBeenCalled()
   })
@@ -42,37 +43,60 @@ describe('Login form', () => {
     vi.mocked(authApiModule.authApi.login).mockResolvedValue({
       user: {
         id: '1',
-        email: 'admin@doodhkhata.app',
-        fullName: 'Admin User',
-        role: 'ADMIN',
+        name: 'Platform Owner',
+        mobileNumber: '919999999999',
+        role: 'PLATFORM_OWNER',
         status: 'ACTIVE',
       },
-      tokens: {
-        accessToken: 'access-token',
-        refreshToken: 'refresh-token',
-      },
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
     })
 
     renderWithProviders(
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/" element={<div>Dashboard home</div>} />
+        <Route path="/customer" element={<div>Customer welcome</div>} />
       </Routes>,
       { route: '/login' },
     )
 
-    await user.type(screen.getByLabelText(/email/i), 'admin@doodhkhata.app')
-    await user.type(screen.getByLabelText(/password/i), 'password123')
+    await user.type(screen.getByLabelText(/mobile number/i), '9999999999')
+    await user.type(screen.getByLabelText(/password/i), 'Admin@12345')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
 
     await waitFor(() => {
       expect(authApiModule.authApi.login).toHaveBeenCalledWith({
-        email: 'admin@doodhkhata.app',
-        password: 'password123',
+        mobileNumber: '919999999999',
+        password: 'Admin@12345',
       })
     })
 
     expect(tokenStore.getAccessToken()).toBe('access-token')
     expect(await screen.findByText('Dashboard home')).toBeInTheDocument()
+  })
+
+  it('shows a friendly localized error for invalid credentials', async () => {
+    const user = userEvent.setup()
+    vi.mocked(authApiModule.authApi.login).mockRejectedValue(
+      new ApiError({
+        statusCode: 401,
+        code: 'UNAUTHORIZED',
+        message: 'Invalid credentials',
+      }),
+    )
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+      </Routes>,
+      { route: '/login' },
+    )
+
+    await user.type(screen.getByLabelText(/mobile number/i), '9999999999')
+    await user.type(screen.getByLabelText(/password/i), 'Admin@12345')
+    await user.click(screen.getByRole('button', { name: /sign in/i }))
+
+    expect(await screen.findByText('Incorrect mobile number or password.')).toBeInTheDocument()
   })
 })

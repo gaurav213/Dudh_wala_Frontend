@@ -2,6 +2,7 @@ import { Box, Stack, TextField } from '@mui/material'
 import { useQuery } from '@tanstack/react-query'
 import { createColumnHelper } from '@tanstack/react-table'
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ErrorState } from '../../../components/feedback/ErrorState'
 import { DataTable, PageHeader } from '../../../components/tables/DataTable'
 import { useQueryFilters } from '../../../hooks/useQueryFilters'
@@ -21,6 +22,7 @@ const defaultFilters = {
 }
 
 export function AuditListPage() {
+  const { t } = useTranslation()
   const [filters, setFilters] = useQueryFilters(defaultFilters)
 
   const query = useQuery({
@@ -40,30 +42,30 @@ export function AuditListPage() {
   const columns = useMemo(
     () => [
       columnHelper.accessor('createdAt', {
-        header: 'When',
+        header: t('day'),
         cell: (i) => formatDate(i.getValue()),
       }),
       columnHelper.accessor('actorName', {
-        header: 'Actor',
+        header: t('profile'),
         cell: (i) => `${i.getValue()} (${i.row.original.actorRole})`,
       }),
-      columnHelper.accessor('action', { header: 'Action' }),
+      columnHelper.accessor('action', { header: t('details') }),
       columnHelper.accessor('entityType', {
-        header: 'Entity',
+        header: t('details'),
         cell: (i) => `${i.getValue()} · ${i.row.original.entityId}`,
       }),
       columnHelper.accessor('ipAddress', {
-        header: 'IP',
+        header: t('ipAddress'),
         cell: (i) => i.getValue() || '—',
       }),
     ],
-    [],
+    [t],
   )
 
   if (query.isError) {
     return (
       <ErrorState
-        title="Failed to load audit logs"
+        title={t('couldNotLoad')}
         message={(query.error as Error).message}
         onRetry={() => void query.refetch()}
       />
@@ -72,22 +74,22 @@ export function AuditListPage() {
 
   return (
     <Box>
-      <PageHeader title="Audit log" subtitle="Read-only trail of administrative actions" />
+      <PageHeader title={t('navAudit')} subtitle={t('history')} />
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mb: 2 }}>
         <TextField
-          label="Action"
+          label={t('details')}
           size="small"
           value={filters.action}
           onChange={(e) => setFilters({ action: e.target.value, page: '1' })}
         />
         <TextField
-          label="Entity type"
+          label={t('filter')}
           size="small"
           value={filters.entityType}
           onChange={(e) => setFilters({ entityType: e.target.value, page: '1' })}
         />
         <TextField
-          label="From"
+          label={t('from')}
           type="date"
           size="small"
           InputLabelProps={{ shrink: true }}
@@ -95,7 +97,7 @@ export function AuditListPage() {
           onChange={(e) => setFilters({ from: e.target.value, page: '1' })}
         />
         <TextField
-          label="To"
+          label={t('to')}
           type="date"
           size="small"
           InputLabelProps={{ shrink: true }}

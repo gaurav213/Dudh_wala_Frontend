@@ -17,9 +17,10 @@ export interface AuthContextValue {
   user: AuthUser | null
   isAuthenticated: boolean
   isBootstrapping: boolean
-  login: (payload: LoginRequest) => Promise<void>
+  login: (payload: LoginRequest) => Promise<AuthUser>
   logout: () => Promise<void>
   refreshProfile: () => Promise<void>
+  uploadAvatar: (photo: File) => Promise<void>
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)
@@ -46,13 +47,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshProfile = useCallback(async () => {
     const profile = await authApi.profile()
-    setUser(profile)
+    setUser(profile.user)
+  }, [])
+
+  const uploadAvatar = useCallback(async (photo: File) => {
+    const next = await authApi.uploadAvatar(photo)
+    setUser(next)
   }, [])
 
   const login = useCallback(async (payload: LoginRequest) => {
     const result = await authApi.login(payload)
-    tokenStore.setTokens(result.tokens.accessToken, result.tokens.refreshToken)
+    tokenStore.setTokens(result.accessToken, result.refreshToken)
     setUser(result.user)
+    return result.user
   }, [])
 
   useEffect(() => {
@@ -61,9 +68,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         clearSession()
         navigate('/session-expired', { replace: true })
       },
-      onForbidden: () => {
-        navigate('/unauthorized', { replace: true })
-      },
+      // Do not hard-redirect on 403 — pages show their own errors.
+      // Global redirect caused false "Unauthorized" after login.
+      onForbidden: undefined,
     })
   }, [clearSession, navigate])
 
@@ -81,10 +88,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const tokens = await authApi.refresh(refresh)
         tokenStore.setTokens(tokens.accessToken, tokens.refreshToken ?? refresh)
         const profile = await authApi.profile()
-        if (!cancelled) setUser(profile)
+        if (!cancelled) setUser(profile.user)
       } catch {
-        tokenStore.clear()
-        if (!cancelled) setUser(null)
+        // Transient refresh failure keeps the refresh token; only wipe UI if it's gone.
+        if (!tokenStore.getRefreshToken()) {
+          if (!cancelled) setUser(null)
+        } else {
+          try {
+            const profile = await authApi.profile()
+            if (!cancelled) setUser(profile.user)
+          } catch {
+            if (!cancelled) setUser(null)
+          }
+        }
       } finally {
         if (!cancelled) setIsBootstrapping(false)
       }
@@ -104,8 +120,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       logout,
       refreshProfile,
+      uploadAvatar,
     }),
-    [user, isBootstrapping, login, logout, refreshProfile],
+    [user, isBootstrapping, login, logout, refreshProfile, uploadAvatar],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

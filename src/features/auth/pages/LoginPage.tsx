@@ -1,103 +1,117 @@
-import { Alert, Box, Button, Paper, Stack, Typography } from '@mui/material'
+import { Alert, Box, Button, Divider, Stack, Typography } from '@mui/material'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useLocation, useNavigate, Navigate } from 'react-router-dom'
-import { useState } from 'react'
+import { Link as RouterLink, useLocation, useNavigate, Navigate } from 'react-router-dom'
+import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { FormTextField } from '../../../components/forms/FormFields'
 import { useAuth } from '../../../lib/auth/useAuth'
-import { isApiError } from '../../../lib/api/client'
+import { homePathForRole } from '../../../lib/auth/homePath'
+import { friendlyAuthError } from '../../../lib/api/errors'
 import { loginSchema, type LoginFormValues } from '../schemas/loginSchema'
+import { appBrand } from '../../../branding/appBrand'
+import { AuthShell } from '../components/AuthShell'
 
 export function LoginPage() {
-  const { login, isAuthenticated, isBootstrapping } = useAuth()
+  const { login, isAuthenticated, isBootstrapping, user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const { t } = useTranslation()
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const registeredMessage =
+    (location.state as { registered?: boolean; message?: string } | null)?.message ?? null
+  const schema = useMemo(() => loginSchema(t), [t])
 
   const {
     control,
     handleSubmit,
     formState: { isSubmitting },
   } = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: { email: '', password: '' },
+    resolver: zodResolver(schema),
+    defaultValues: { mobileNumber: '', password: '' },
   })
 
-  if (!isBootstrapping && isAuthenticated) {
-    return <Navigate to="/" replace />
+  if (!isBootstrapping && isAuthenticated && user) {
+    return <Navigate to={homePathForRole(user.role)} replace />
   }
 
   const onSubmit = handleSubmit(async (values) => {
     setSubmitError(null)
     try {
-      await login(values)
-      const from = (location.state as { from?: string } | null)?.from ?? '/'
-      navigate(from, { replace: true })
+      const loggedIn = await login(values)
+      const from = (location.state as { from?: string } | null)?.from
+      const fallback = homePathForRole(loggedIn.role)
+      // Only honor deep-link "from" for roles that can use the console.
+      const dest =
+        from && (loggedIn.role === 'PLATFORM_OWNER' || loggedIn.role === 'FARM_OWNER')
+          ? from
+          : fallback
+      navigate(dest, { replace: true })
     } catch (error) {
-      setSubmitError(isApiError(error) ? error.message : 'Login failed')
+      setSubmitError(friendlyAuthError(error, t))
     }
   })
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'grid',
-        placeItems: 'center',
-        px: 2,
-        background:
-          'radial-gradient(ellipse at top left, rgba(20,184,166,0.18), transparent 50%), linear-gradient(160deg, #0F172A 0%, #134E4A 45%, #F1F5F9 45%)',
-      }}
+    <AuthShell
+      title={appBrand.name}
+      subtitle={t('signIn')}
     >
-      <Paper
-        elevation={0}
-        sx={{
-          width: '100%',
-          maxWidth: 420,
-          p: { xs: 3, sm: 4 },
-          border: '1px solid',
-          borderColor: 'divider',
-          boxShadow: '0 24px 48px rgba(15, 23, 42, 0.12)',
-        }}
-      >
-        <Stack spacing={1} sx={{ mb: 3 }}>
-          <Typography variant="h3" component="h1" sx={{ fontSize: { xs: '1.75rem', sm: '2rem' } }}>
-            Doodh Khata
-          </Typography>
-          <Typography color="text.secondary">
-            Sign in to the admin console to manage suppliers, deliveries, and billing.
-          </Typography>
-        </Stack>
+      <Box component="form" onSubmit={onSubmit} noValidate>
+        <Stack spacing={2.5}>
+          {registeredMessage ? <Alert severity="success">{registeredMessage}</Alert> : null}
+          {submitError ? <Alert severity="error">{submitError}</Alert> : null}
+          <FormTextField
+            name="mobileNumber"
+            control={control}
+            label={t('mobileNumber')}
+            type="tel"
+            autoComplete="tel"
+            fullWidth
+            required
+            helperText={t('invalidMobile')}
+            inputProps={{ 'aria-required': true, inputMode: 'numeric' }}
+          />
+          <FormTextField
+            name="password"
+            control={control}
+            label={t('password')}
+            type="password"
+            autoComplete="current-password"
+            fullWidth
+            required
+            inputProps={{ 'aria-required': true }}
+          />
+          <Button type="submit" variant="contained" size="large" disabled={isSubmitting} fullWidth>
+            {isSubmitting ? t('signingIn') : t('signIn')}
+          </Button>
 
-        <Box component="form" onSubmit={onSubmit} noValidate>
-          <Stack spacing={2.5}>
-            {submitError ? <Alert severity="error">{submitError}</Alert> : null}
-            <FormTextField
-              name="email"
-              control={control}
-              label="Email"
-              type="email"
-              autoComplete="username"
-              fullWidth
-              required
-              inputProps={{ 'aria-required': true }}
-            />
-            <FormTextField
-              name="password"
-              control={control}
-              label="Password"
-              type="password"
-              autoComplete="current-password"
-              fullWidth
-              required
-              inputProps={{ 'aria-required': true }}
-            />
-            <Button type="submit" variant="contained" size="large" disabled={isSubmitting} fullWidth>
-              {isSubmitting ? 'Signing in…' : 'Sign in'}
-            </Button>
-          </Stack>
-        </Box>
-      </Paper>
-    </Box>
+          <Divider>
+            <Typography variant="caption" color="text.secondary">
+              {t('createAccount')}
+            </Typography>
+          </Divider>
+
+          <Button
+            component={RouterLink}
+            to="/register/farm-owner"
+            variant="outlined"
+            size="large"
+            fullWidth
+          >
+            {t('register')} — {t('farm')}
+          </Button>
+          <Button
+            component={RouterLink}
+            to="/register/customer"
+            variant="text"
+            size="large"
+            fullWidth
+          >
+            {t('register')} — {t('customer')}
+          </Button>
+        </Stack>
+      </Box>
+    </AuthShell>
   )
 }

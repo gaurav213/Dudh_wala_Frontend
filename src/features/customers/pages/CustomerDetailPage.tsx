@@ -1,6 +1,7 @@
 import { Box, Button, Card, CardContent, Grid2 as Grid, Stack, Typography } from '@mui/material'
 import { useQuery } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link as RouterLink, useParams } from 'react-router-dom'
 import { ErrorState } from '../../../components/feedback/ErrorState'
 import { LoadingState } from '../../../components/feedback/LoadingState'
@@ -9,6 +10,7 @@ import { formatCurrency, formatDate, formatLiters } from '../../../utils/format'
 import { customersApi } from '../api/customersApi'
 
 export function CustomerDetailPage() {
+  const { t } = useTranslation()
   const { id = '' } = useParams()
   const query = useQuery({
     queryKey: ['customers', id],
@@ -20,7 +22,7 @@ export function CustomerDetailPage() {
   if (query.isError || !query.data) {
     return (
       <ErrorState
-        title="Customer not found"
+        title={t('couldNotLoad')}
         message={(query.error as Error | undefined)?.message}
         onRetry={() => void query.refetch()}
       />
@@ -33,10 +35,10 @@ export function CustomerDetailPage() {
     <Box>
       <PageHeader
         title={customer.fullName}
-        subtitle={`${customer.supplierName} · ${customer.phone || customer.email || 'No contact'}`}
+        subtitle={`${customer.supplierName} · ${customer.phone || customer.email || t('none')}`}
         actions={
           <Button component={RouterLink} to="/customers" variant="outlined">
-            Back
+            {t('back')}
           </Button>
         }
       />
@@ -46,7 +48,7 @@ export function CustomerDetailPage() {
           <Stack direction="row" spacing={2} alignItems="center">
             <StatusChip status={customer.status} />
             <Typography variant="body2" color="text.secondary">
-              Joined {formatDate(customer.createdAt)}
+              {t('from')} {formatDate(customer.createdAt)}
             </Typography>
           </Stack>
         </CardContent>
@@ -54,7 +56,7 @@ export function CustomerDetailPage() {
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, md: 4 }}>
-          <HistoryCard title="Deliveries">
+          <HistoryCard title={t('deliveries')}>
             {customer.deliveries.map((d) => (
               <Box key={d.id} sx={{ mb: 1.5 }}>
                 <Typography fontWeight={600}>
@@ -63,11 +65,11 @@ export function CustomerDetailPage() {
                 <StatusChip status={d.status} />
               </Box>
             ))}
-            {!customer.deliveries.length ? <Typography color="text.secondary">None</Typography> : null}
+            {!customer.deliveries.length ? <Typography color="text.secondary">{t('none')}</Typography> : null}
           </HistoryCard>
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <HistoryCard title="Bills">
+          <HistoryCard title={t('bills')}>
             {customer.bills.map((b) => (
               <Box key={b.id} sx={{ mb: 1.5 }}>
                 <Typography fontWeight={600}>
@@ -78,11 +80,11 @@ export function CustomerDetailPage() {
                 </Typography>
               </Box>
             ))}
-            {!customer.bills.length ? <Typography color="text.secondary">None</Typography> : null}
+            {!customer.bills.length ? <Typography color="text.secondary">{t('none')}</Typography> : null}
           </HistoryCard>
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <HistoryCard title="Payments">
+          <HistoryCard title={t('payments')}>
             {customer.payments.map((p) => (
               <Box key={p.id} sx={{ mb: 1.5 }}>
                 <Typography fontWeight={600}>
@@ -93,7 +95,7 @@ export function CustomerDetailPage() {
                 </Typography>
               </Box>
             ))}
-            {!customer.payments.length ? <Typography color="text.secondary">None</Typography> : null}
+            {!customer.payments.length ? <Typography color="text.secondary">{t('none')}</Typography> : null}
           </HistoryCard>
         </Grid>
       </Grid>

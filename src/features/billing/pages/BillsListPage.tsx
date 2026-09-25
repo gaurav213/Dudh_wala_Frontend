@@ -2,6 +2,7 @@ import { Box, Button, MenuItem, Stack, TextField } from '@mui/material'
 import { useQuery } from '@tanstack/react-query'
 import { createColumnHelper } from '@tanstack/react-table'
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link as RouterLink } from 'react-router-dom'
 import { ErrorState } from '../../../components/feedback/ErrorState'
 import { DataTable, PageHeader, StatusChip } from '../../../components/tables/DataTable'
@@ -13,15 +14,14 @@ import type { Bill } from '../types/billing'
 const columnHelper = createColumnHelper<Bill>()
 const defaultFilters = {
   status: '',
-  supplierId: '',
   customerId: '',
-  from: '',
-  to: '',
+  billingMonth: '',
   page: '1',
   limit: '20',
 }
 
 export function BillsListPage() {
+  const { t } = useTranslation()
   const [filters, setFilters] = useQueryFilters(defaultFilters)
 
   const query = useQuery({
@@ -29,10 +29,8 @@ export function BillsListPage() {
     queryFn: () =>
       billingApi.list({
         status: filters.status || undefined,
-        supplierId: filters.supplierId || undefined,
         customerId: filters.customerId || undefined,
-        from: filters.from || undefined,
-        to: filters.to || undefined,
+        billingMonth: filters.billingMonth || undefined,
         page: Number(filters.page) || 1,
         limit: Number(filters.limit) || 20,
       }),
@@ -41,39 +39,39 @@ export function BillsListPage() {
   const columns = useMemo(
     () => [
       columnHelper.accessor('id', {
-        header: 'Bill',
+        header: t('bills'),
         cell: (info) => (
           <Button component={RouterLink} to={`/billing/${info.getValue()}`} size="small">
             {info.getValue().slice(0, 8)}…
           </Button>
         ),
       }),
-      columnHelper.accessor('customerName', { header: 'Customer' }),
-      columnHelper.accessor('supplierName', { header: 'Supplier' }),
+      columnHelper.accessor('customerName', { header: t('customer') }),
+      columnHelper.accessor('supplierName', { header: t('farm') }),
       columnHelper.accessor('amount', {
-        header: 'Amount',
+        header: t('amount'),
         cell: (i) => formatCurrency(i.getValue()),
       }),
       columnHelper.accessor('outstandingAmount', {
-        header: 'Outstanding',
+        header: t('outstanding'),
         cell: (i) => formatCurrency(i.getValue()),
       }),
       columnHelper.accessor('status', {
-        header: 'Status',
+        header: t('status'),
         cell: (i) => <StatusChip status={i.getValue()} />,
       }),
       columnHelper.accessor('generatedAt', {
-        header: 'Generated',
+        header: t('generate'),
         cell: (i) => formatDate(i.getValue()),
       }),
     ],
-    [],
+    [t],
   )
 
   if (query.isError) {
     return (
       <ErrorState
-        title="Failed to load bills"
+        title={t('couldNotLoad')}
         message={(query.error as Error).message}
         onRetry={() => void query.refetch()}
       />
@@ -82,29 +80,34 @@ export function BillsListPage() {
 
   return (
     <Box>
-      <PageHeader title="Billing" subtitle="Bills with period and payment status filters" />
+      <PageHeader title={t('billing')} subtitle={t('thisMonth')} />
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mb: 2 }}>
         <TextField
           select
-          label="Status"
+          label={t('status')}
           size="small"
           value={filters.status}
           onChange={(e) => setFilters({ status: e.target.value, page: '1' })}
-          sx={{ minWidth: 160 }}
+          sx={{ minWidth: 180 }}
         >
-          <MenuItem value="">All</MenuItem>
-          <MenuItem value="PAID">Paid</MenuItem>
-          <MenuItem value="PARTIAL">Partial</MenuItem>
-          <MenuItem value="OUTSTANDING">Outstanding</MenuItem>
+          <MenuItem value="">{t('all')}</MenuItem>
+          <MenuItem value="DRAFT">{t('pending')}</MenuItem>
+          <MenuItem value="ISSUED">{t('open')}</MenuItem>
+          <MenuItem value="PARTIALLY_PAID">{t('payment')}</MenuItem>
+          <MenuItem value="PAID">{t('done')}</MenuItem>
+          <MenuItem value="OVERDUE">{t('outstanding')}</MenuItem>
+          <MenuItem value="VOID">{t('cancelled')}</MenuItem>
         </TextField>
         <TextField
-          label="Supplier ID"
+          label={`${t('billing')} · ${t('thisMonth')}`}
           size="small"
-          value={filters.supplierId}
-          onChange={(e) => setFilters({ supplierId: e.target.value, page: '1' })}
+          placeholder="YYYY-MM"
+          value={filters.billingMonth}
+          onChange={(e) => setFilters({ billingMonth: e.target.value, page: '1' })}
+          sx={{ minWidth: 140 }}
         />
         <TextField
-          label="Customer ID"
+          label={t('customer')}
           size="small"
           value={filters.customerId}
           onChange={(e) => setFilters({ customerId: e.target.value, page: '1' })}

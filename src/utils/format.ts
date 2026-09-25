@@ -1,13 +1,26 @@
-export function formatCurrency(amount: number, currency = 'INR'): string {
+export function formatCurrency(amount: number | string, currency = 'INR'): string {
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency,
     maximumFractionDigits: 2,
-  }).format(amount)
+  }).format(Number(amount))
 }
 
-export function formatLiters(value: number): string {
-  return `${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(value)} L`
+/** Quantity display: whole numbers as `1`, halves as `0.5` (never `1.000`). */
+export function formatQuantity(value?: number | string | null): string {
+  if (value === undefined || value === null || value === '') return '—'
+  const n = Number(String(value).trim().replace(',', '.'))
+  if (!Number.isFinite(n)) return String(value)
+  const rounded = Math.round(n * 10) / 10
+  if (Math.abs(rounded - Math.round(rounded)) < 1e-9) {
+    return String(Math.round(rounded))
+  }
+  return rounded.toFixed(1)
+}
+
+export function formatLiters(value?: number | string | null): string {
+  const qty = formatQuantity(value)
+  return qty === '—' ? '—' : `${qty} L`
 }
 
 export function formatDate(value?: string | null): string {

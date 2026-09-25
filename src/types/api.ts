@@ -1,4 +1,8 @@
-export type UserRole = 'ADMIN' | 'SUPPLIER' | 'CUSTOMER'
+export type UserRole =
+  | 'PLATFORM_OWNER'
+  | 'FARM_OWNER'
+  | 'DELIVERY_STAFF'
+  | 'CUSTOMER'
 
 export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'BLOCKED' | 'PENDING'
 

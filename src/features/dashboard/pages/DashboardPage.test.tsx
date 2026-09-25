@@ -11,8 +11,8 @@ vi.mock('../api/dashboardApi', () => ({
     summary: vi.fn(),
     growth: vi.fn(),
     revenue: vi.fn(),
-    recentRegistrations: vi.fn(),
-    failedSyncs: vi.fn(),
+    farmToday: vi.fn(),
+    farmMonth: vi.fn(),
   },
 }))
 
@@ -25,9 +25,9 @@ vi.mock('../../../lib/auth/useAuth', async () => {
     useAuth: () => ({
       user: {
         id: '1',
-        email: 'admin@test.com',
-        fullName: 'Admin',
-        role: 'ADMIN',
+        name: 'Platform Owner',
+        mobileNumber: '919999999999',
+        role: 'PLATFORM_OWNER',
         status: 'ACTIVE',
       },
       isAuthenticated: true,
@@ -42,25 +42,19 @@ vi.mock('../../../lib/auth/useAuth', async () => {
 describe('Dashboard API states', () => {
   it('renders summary metrics on success', async () => {
     vi.mocked(dashboardApiModule.dashboardApi.summary).mockResolvedValue({
-      totalSuppliers: 12,
-      activeSuppliers: 10,
-      totalCustomers: 80,
-      deliveriesToday: 40,
-      milkThisMonthLiters: 1200,
-      billedThisMonth: 50000,
-      paymentsThisMonth: 42000,
-      outstandingAmount: 8000,
+      suppliers: 12,
+      customers: 80,
+      deliveries: 40,
+      outstandingBalance: '8000',
     })
     vi.mocked(dashboardApiModule.dashboardApi.growth).mockResolvedValue([])
     vi.mocked(dashboardApiModule.dashboardApi.revenue).mockResolvedValue([])
-    vi.mocked(dashboardApiModule.dashboardApi.recentRegistrations).mockResolvedValue([])
-    vi.mocked(dashboardApiModule.dashboardApi.failedSyncs).mockResolvedValue([])
 
     renderWithProviders(<DashboardPage />)
 
     expect(await screen.findByText('12')).toBeInTheDocument()
-    expect(screen.getByText('Total suppliers')).toBeInTheDocument()
-    expect(screen.getByText('Active suppliers')).toBeInTheDocument()
+    expect(screen.getByText('Farm owners')).toBeInTheDocument()
+    expect(screen.getByText('Customers')).toBeInTheDocument()
   })
 
   it('shows error state with retry', async () => {
@@ -71,28 +65,22 @@ describe('Dashboard API states', () => {
 
     renderWithProviders(<DashboardPage />)
 
-    expect(await screen.findByText(/failed to load dashboard/i)).toBeInTheDocument()
+    expect(await screen.findByText(/could not load/i)).toBeInTheDocument()
     expect(screen.getByText('Summary unavailable')).toBeInTheDocument()
 
     vi.mocked(dashboardApiModule.dashboardApi.summary).mockResolvedValue({
-      totalSuppliers: 1,
-      activeSuppliers: 1,
-      totalCustomers: 1,
-      deliveriesToday: 1,
-      milkThisMonthLiters: 1,
-      billedThisMonth: 1,
-      paymentsThisMonth: 1,
-      outstandingAmount: 1,
+      suppliers: 1,
+      customers: 1,
+      deliveries: 1,
+      outstandingBalance: '1',
     })
     vi.mocked(dashboardApiModule.dashboardApi.growth).mockResolvedValue([])
     vi.mocked(dashboardApiModule.dashboardApi.revenue).mockResolvedValue([])
-    vi.mocked(dashboardApiModule.dashboardApi.recentRegistrations).mockResolvedValue([])
-    vi.mocked(dashboardApiModule.dashboardApi.failedSyncs).mockResolvedValue([])
 
     await user.click(screen.getByRole('button', { name: /retry/i }))
 
     await waitFor(() => {
-      expect(screen.getByText('Total suppliers')).toBeInTheDocument()
+      expect(screen.getByText('Farm owners')).toBeInTheDocument()
     })
   })
 })

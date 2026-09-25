@@ -1,23 +1,17 @@
-import { Alert, Card, CardContent, Typography } from '@mui/material'
+import { Card, CardContent } from '@mui/material'
+import { useTranslation } from 'react-i18next'
 import { PageHeader } from '../../../components/tables/DataTable'
-import { env } from '../../../config/env'
+import { AppearanceLanguageSettings } from '../components/AppearanceLanguageSettings'
 
 export function SettingsPage() {
+  const { t } = useTranslation()
+
   return (
     <>
-      <PageHeader title="Settings" subtitle="Admin preferences placeholder" />
+      <PageHeader title={t('settings')} subtitle={t('settingsSubtitle')} />
       <Card variant="outlined">
         <CardContent>
-          <Alert severity="info" sx={{ mb: 2 }}>
-            Settings will include notification preferences, export defaults, and org profile once the
-            backend endpoints are available.
-          </Alert>
-          <Typography variant="body2" color="text.secondary">
-            Environment: <strong>{env.appEnv}</strong>
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            API base URL: <strong>{env.apiBaseUrl}</strong>
-          </Typography>
+          <AppearanceLanguageSettings />
         </CardContent>
       </Card>
     </>

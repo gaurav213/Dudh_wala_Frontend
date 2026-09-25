@@ -1,38 +1,37 @@
 export interface DashboardSummary {
-  totalSuppliers: number
-  activeSuppliers: number
-  totalCustomers: number
-  deliveriesToday: number
-  milkThisMonthLiters: number
-  billedThisMonth: number
-  paymentsThisMonth: number
-  outstandingAmount: number
-}
-
-export interface RecentRegistration {
-  id: string
-  fullName: string
-  role: string
-  createdAt: string
-  status: string
-}
-
-export interface FailedSync {
-  id: string
-  entityType: string
-  entityId: string
-  errorMessage: string
-  failedAt: string
+  suppliers: number
+  customers: number
+  deliveries: number
+  outstandingBalance: string
 }
 
 export interface DashboardGrowthPoint {
   month: string
-  suppliers: number
-  customers: number
+  count: number
 }
 
 export interface DashboardRevenuePoint {
   month: string
-  billed: number
-  collected: number
+  revenue: string
+}
+
+export interface FarmOwnerTodaySummary {
+  summary: {
+    date: string
+    total: number
+    pending: number
+    delivered: number
+    skipped: number
+    cancelled: number
+  }
+}
+
+export interface FarmOwnerMonthSummary {
+  billingMonth: string
+  deliveryCount: number
+  deliveredCount: number
+  milkAmount: string
+  collected: string
+  outstanding: string
+  billCount: number
 }

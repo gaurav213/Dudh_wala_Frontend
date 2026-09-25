@@ -18,6 +18,7 @@ import {
   type ColumnDef,
 } from '@tanstack/react-table'
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { EmptyState } from '../feedback/EmptyState'
 import { LoadingState } from '../feedback/LoadingState'
 
@@ -37,13 +38,14 @@ export function DataTable<T>({
   columns,
   data,
   isLoading,
-  emptyTitle = 'No records found',
+  emptyTitle,
   page = 1,
   limit = 20,
   total = 0,
   onPageChange,
   onLimitChange,
 }: DataTableProps<T>) {
+  const { t } = useTranslation()
   const table = useReactTable({
     data,
     columns,
@@ -53,12 +55,12 @@ export function DataTable<T>({
   })
 
   if (isLoading) return <LoadingState />
-  if (!data.length) return <EmptyState title={emptyTitle} />
+  if (!data.length) return <EmptyState title={emptyTitle ?? t('noData')} />
 
   return (
     <Box>
       <TableContainer>
-        <Table size="small" aria-label="data table">
+        <Table size="small" aria-label={t('dataTable')}>
           <TableHead>
             {table.getHeaderGroups().map((hg) => (
               <TableRow key={hg.id}>

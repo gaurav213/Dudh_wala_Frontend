@@ -2,6 +2,7 @@ import { Box, Button, MenuItem, Stack, TextField } from '@mui/material'
 import { useQuery } from '@tanstack/react-query'
 import { createColumnHelper } from '@tanstack/react-table'
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link as RouterLink } from 'react-router-dom'
 import { ErrorState } from '../../../components/feedback/ErrorState'
 import { DataTable, PageHeader, StatusChip } from '../../../components/tables/DataTable'
@@ -14,6 +15,7 @@ const columnHelper = createColumnHelper<Customer>()
 const defaultFilters = { search: '', status: '', supplierId: '', page: '1', limit: '20' }
 
 export function CustomersListPage() {
+  const { t } = useTranslation()
   const [filters, setFilters] = useQueryFilters(defaultFilters)
 
   const query = useQuery({
@@ -31,31 +33,31 @@ export function CustomersListPage() {
   const columns = useMemo(
     () => [
       columnHelper.accessor('fullName', {
-        header: 'Name',
+        header: t('name'),
         cell: (info) => (
           <Button component={RouterLink} to={`/customers/${info.row.original.id}`} size="small">
             {info.getValue()}
           </Button>
         ),
       }),
-      columnHelper.accessor('supplierName', { header: 'Supplier' }),
-      columnHelper.accessor('phone', { header: 'Phone', cell: (i) => i.getValue() || '—' }),
+      columnHelper.accessor('supplierName', { header: t('farm') }),
+      columnHelper.accessor('phone', { header: t('mobileNumber'), cell: (i) => i.getValue() || '—' }),
       columnHelper.accessor('status', {
-        header: 'Status',
+        header: t('status'),
         cell: (info) => <StatusChip status={info.getValue()} />,
       }),
       columnHelper.accessor('createdAt', {
-        header: 'Joined',
+        header: t('from'),
         cell: (info) => formatDate(info.getValue()),
       }),
     ],
-    [],
+    [t],
   )
 
   if (query.isError) {
     return (
       <ErrorState
-        title="Failed to load customers"
+        title={t('couldNotLoad')}
         message={(query.error as Error).message}
         onRetry={() => void query.refetch()}
       />
@@ -64,17 +66,17 @@ export function CustomersListPage() {
 
   return (
     <Box>
-      <PageHeader title="Customers" subtitle="Filter by supplier and account status" />
+      <PageHeader title={t('customers')} subtitle={`${t('filter')} · ${t('status')}`} />
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }}>
         <TextField
-          label="Search"
+          label={t('search')}
           size="small"
           value={filters.search}
           onChange={(e) => setFilters({ search: e.target.value, page: '1' })}
           fullWidth
         />
         <TextField
-          label="Supplier ID"
+          label={t('farm')}
           size="small"
           value={filters.supplierId}
           onChange={(e) => setFilters({ supplierId: e.target.value, page: '1' })}
@@ -82,16 +84,16 @@ export function CustomersListPage() {
         />
         <TextField
           select
-          label="Status"
+          label={t('status')}
           size="small"
           value={filters.status}
           onChange={(e) => setFilters({ status: e.target.value, page: '1' })}
           sx={{ minWidth: 160 }}
         >
-          <MenuItem value="">All</MenuItem>
-          <MenuItem value="ACTIVE">Active</MenuItem>
-          <MenuItem value="INACTIVE">Inactive</MenuItem>
-          <MenuItem value="BLOCKED">Blocked</MenuItem>
+          <MenuItem value="">{t('all')}</MenuItem>
+          <MenuItem value="ACTIVE">{t('active')}</MenuItem>
+          <MenuItem value="INACTIVE">{t('cancelled')}</MenuItem>
+          <MenuItem value="BLOCKED">{t('blocked')}</MenuItem>
         </TextField>
       </Stack>
       <DataTable

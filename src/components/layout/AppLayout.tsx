@@ -1,19 +1,27 @@
 import {
-  AccountBalanceWalletOutlined,
   AssessmentOutlined,
+  AssignmentIndOutlined,
+  BadgeOutlined,
   DashboardOutlined,
+  FactCheckOutlined,
+  GroupsOutlined,
+  HistoryOutlined,
   LocalShippingOutlined,
+  LocationOnOutlined,
   LogoutOutlined,
+  MailOutlined,
   Menu as MenuIcon,
+  OpacityOutlined,
   PaymentsOutlined,
   PeopleOutlined,
   ReceiptLongOutlined,
   SettingsOutlined,
   StorefrontOutlined,
-  HistoryOutlined,
+  SubscriptionsOutlined,
 } from '@mui/icons-material'
 import {
   AppBar,
+  Badge,
   Box,
   Divider,
   Drawer,
@@ -28,23 +36,26 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material'
-import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useMemo, useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { BrandLogo } from '../brand/BrandLogo'
+import { appBrand } from '../../branding/appBrand'
+import { farmApi } from '../../features/farm/api/farmApi'
+import { notificationsApi } from '../../features/notifications/api/notificationsApi'
 import { useAuth } from '../../lib/auth/useAuth'
+import { confirmLogout } from '../../lib/auth/confirmLogout'
 
-const DRAWER_WIDTH = 260
+const DRAWER_WIDTH = 280
 
-const navItems = [
-  { to: '/', label: 'Dashboard', icon: <DashboardOutlined />, roles: ['ADMIN'] },
-  { to: '/suppliers', label: 'Suppliers', icon: <StorefrontOutlined />, roles: ['ADMIN'] },
-  { to: '/customers', label: 'Customers', icon: <PeopleOutlined />, roles: ['ADMIN'] },
-  { to: '/deliveries', label: 'Deliveries', icon: <LocalShippingOutlined />, roles: ['ADMIN'] },
-  { to: '/billing', label: 'Billing', icon: <ReceiptLongOutlined />, roles: ['ADMIN'] },
-  { to: '/payments', label: 'Payments', icon: <PaymentsOutlined />, roles: ['ADMIN'] },
-  { to: '/reports/outstanding', label: 'Outstanding', icon: <AssessmentOutlined />, roles: ['ADMIN'] },
-  { to: '/audit', label: 'Audit', icon: <HistoryOutlined />, roles: ['ADMIN'] },
-  { to: '/settings', label: 'Settings', icon: <SettingsOutlined />, roles: ['ADMIN'] },
-] as const
+interface NavItem {
+  to: string
+  label: string
+  icon: ReactNode
+  end?: boolean
+  badge?: number
+}
 
 export function AppLayout() {
   const theme = useTheme()
@@ -52,19 +63,77 @@ export function AppLayout() {
   const [open, setOpen] = useState(false)
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const { t } = useTranslation()
 
-  const filtered = navItems.filter((item) => user && item.roles.includes(user.role as 'ADMIN'))
+  const dashboardQuery = useQuery({
+    queryKey: ['farm', 'dashboard'],
+    queryFn: () => farmApi.myDashboard(),
+    enabled: user?.role === 'FARM_OWNER',
+    refetchInterval: 30_000,
+  })
+  const unreadQuery = useQuery({
+    queryKey: ['notifications', 'unread-count'],
+    queryFn: async () => (await notificationsApi.unreadCount()).count,
+    enabled: Boolean(user),
+    refetchInterval: 20_000,
+  })
+
+  const pendingRequests = dashboardQuery.data?.counts.pendingServiceRequests ?? 0
+  const unread = unreadQuery.data ?? 0
+  const bellCount = Math.max(unread, pendingRequests)
+
+  const filtered = useMemo<NavItem[]>(() => {
+    if (user?.role === 'FARM_OWNER') {
+      return [
+        { to: '/farm/today', label: t('navTodaysDeliveries'), icon: <LocalShippingOutlined /> },
+        { to: '/farm', label: t('navDashboard'), icon: <DashboardOutlined />, end: true },
+        { to: '/farm/profile', label: t('navFarmProfile'), icon: <BadgeOutlined /> },
+        { to: '/farm/service-areas', label: t('navServiceAreas'), icon: <LocationOnOutlined /> },
+        { to: '/farm/products', label: t('navProducts'), icon: <OpacityOutlined /> },
+        {
+          to: '/farm/requests',
+          label: t('navRequests'),
+          icon: <AssignmentIndOutlined />,
+          badge: pendingRequests,
+        },
+        { to: '/farm/invitations', label: t('navInvitations'), icon: <MailOutlined /> },
+        { to: '/farm/customers', label: t('navConnectedCustomers'), icon: <GroupsOutlined /> },
+        // TEMP: delivery-staff disabled — restore next update
+        // { to: '/farm/staff', label: t('navStaff'), icon: <PeopleOutlined /> },
+        { to: '/customers', label: t('navSubscriptions'), icon: <SubscriptionsOutlined /> },
+        { to: '/deliveries', label: t('navDeliveryReport'), icon: <FactCheckOutlined /> },
+        { to: '/billing', label: t('navBills'), icon: <ReceiptLongOutlined /> },
+        { to: '/payments', label: t('navPayments'), icon: <PaymentsOutlined /> },
+        { to: '/reports/outstanding', label: t('navReports'), icon: <AssessmentOutlined /> },
+        { to: '/settings', label: t('navSettings'), icon: <SettingsOutlined /> },
+      ]
+    }
+    return [
+      { to: '/', label: t('navDashboard'), icon: <DashboardOutlined />, end: true },
+      { to: '/admin/farms', label: t('navFarmApprovals'), icon: <FactCheckOutlined /> },
+      { to: '/suppliers', label: t('navLegacySuppliers'), icon: <StorefrontOutlined /> },
+      { to: '/customers', label: t('navCustomers'), icon: <PeopleOutlined /> },
+      { to: '/deliveries', label: t('navTodaysDeliveries'), icon: <LocalShippingOutlined /> },
+      { to: '/billing', label: t('navBilling'), icon: <ReceiptLongOutlined /> },
+      { to: '/payments', label: t('navPayments'), icon: <PaymentsOutlined /> },
+      { to: '/reports/outstanding', label: t('navOutstanding'), icon: <AssessmentOutlined /> },
+      { to: '/audit', label: t('navAudit'), icon: <HistoryOutlined /> },
+      { to: '/settings', label: t('navSettings'), icon: <SettingsOutlined /> },
+    ]
+  }, [t, user?.role, pendingRequests])
+
+  const consoleLabel = user?.role === 'FARM_OWNER' ? t('farmConsole') : t('platformConsole')
 
   const drawer = (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <Toolbar sx={{ gap: 1.5 }}>
-        <AccountBalanceWalletOutlined color="primary" />
+        <BrandLogo variant="compact" height={32} />
         <Box>
           <Typography variant="subtitle1" fontWeight={800} lineHeight={1.2}>
-            Doodh Khata
+            {appBrand.name}
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            Admin console
+            {consoleLabel}
           </Typography>
         </Box>
       </Toolbar>
@@ -75,41 +144,57 @@ export function AppLayout() {
             key={item.to}
             component={NavLink}
             to={item.to}
-            end={item.to === '/'}
+            end={item.end ?? item.to === '/'}
             onClick={() => isMobile && setOpen(false)}
             sx={{
               borderRadius: 2,
               mb: 0.5,
               '&.active': {
-                bgcolor: 'rgba(15, 118, 110, 0.1)',
-                color: 'primary.dark',
+                bgcolor: 'action.selected',
+                color: 'primary.main',
                 '& .MuiListItemIcon-root': { color: 'primary.main' },
               },
             }}
           >
-            <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
-            <ListItemText primary={item.label} />
+            <ListItemIcon sx={{ minWidth: 40 }}>
+              {item.badge && item.badge > 0 ? (
+                <Badge badgeContent={item.badge} color="error">
+                  {item.icon}
+                </Badge>
+              ) : (
+                item.icon
+              )}
+            </ListItemIcon>
+            <ListItemText
+              primary={
+                item.badge && item.badge > 0
+                  ? `${item.label} (${item.badge})`
+                  : item.label
+              }
+            />
           </ListItemButton>
         ))}
       </List>
       <Divider />
       <Box sx={{ p: 2 }}>
         <Typography variant="body2" fontWeight={600} noWrap>
-          {user?.fullName}
+          {user?.name}
         </Typography>
         <Typography variant="caption" color="text.secondary" display="block" noWrap>
-          {user?.email}
+          {user?.mobileNumber}
         </Typography>
         <Button
           startIcon={<LogoutOutlined />}
-          onClick={() => void logout()}
+          onClick={() => {
+            if (confirmLogout(t('logOutConfirmMessage'))) void logout()
+          }}
           size="small"
           sx={{ mt: 1.5 }}
           fullWidth
           variant="outlined"
           color="secondary"
         >
-          Sign out
+          {t('signOut')}
         </Button>
       </Box>
     </Box>
@@ -127,13 +212,23 @@ export function AppLayout() {
       >
         <Toolbar>
           {isMobile ? (
-            <IconButton color="inherit" edge="start" onClick={() => setOpen(true)} aria-label="Open menu">
+            <IconButton
+              color="inherit"
+              edge="start"
+              onClick={() => setOpen(true)}
+              aria-label={t('open')}
+            >
               <MenuIcon />
             </IconButton>
           ) : null}
           <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 600 }}>
-            Milk ledger administration
+            {t('appTitle')}
           </Typography>
+          {bellCount > 0 ? (
+            <Badge badgeContent={bellCount} color="error" sx={{ mr: 2 }}>
+              <Typography variant="body2">{t('notifications')}</Typography>
+            </Badge>
+          ) : null}
           <Button color="inherit" onClick={() => navigate('/settings')} size="small">
             {user?.role}
           </Button>

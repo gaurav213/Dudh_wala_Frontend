@@ -1,19 +1,34 @@
 /**
  * Token storage strategy
  * -----------------------
- * Access + refresh tokens are kept in memory by default (lost on refresh).
- *
- * Optional session bootstrap: a refresh token may be placed in sessionStorage
- * under REFRESH_STORAGE_KEY so a browser tab reload can silently re-auth.
- * sessionStorage is safer than localStorage (cleared when the tab closes) but
- * is still XSS-readable. Never store long-lived tokens in plain localStorage
- * without documenting the XSS risk and preferring httpOnly cookies from the API.
+ * Access token stays in memory (short-lived).
+ * Refresh token is persisted in localStorage so sessions survive browser
+ * restarts (Instagram-style stay-signed-in). XSS can still read localStorage;
+ * httpOnly cookies would be preferable once the API supports them.
  */
 
 const REFRESH_STORAGE_KEY = 'dk_refresh_token'
+const LEGACY_SESSION_KEY = 'dk_refresh_token'
 
 let accessToken: string | null = null
 let refreshToken: string | null = null
+
+function readPersistedRefresh(): string | null {
+  try {
+    const fromLocal = localStorage.getItem(REFRESH_STORAGE_KEY)
+    if (fromLocal) return fromLocal
+    // Migrate older sessionStorage sessions once.
+    const fromSession = sessionStorage.getItem(LEGACY_SESSION_KEY)
+    if (fromSession) {
+      localStorage.setItem(REFRESH_STORAGE_KEY, fromSession)
+      sessionStorage.removeItem(LEGACY_SESSION_KEY)
+      return fromSession
+    }
+  } catch {
+    // ignore quota / private mode
+  }
+  return null
+}
 
 export const tokenStore = {
   getAccessToken(): string | null {
@@ -22,11 +37,9 @@ export const tokenStore = {
 
   getRefreshToken(): string | null {
     if (refreshToken) return refreshToken
-    try {
-      return sessionStorage.getItem(REFRESH_STORAGE_KEY)
-    } catch {
-      return null
-    }
+    const persisted = readPersistedRefresh()
+    if (persisted) refreshToken = persisted
+    return persisted
   },
 
   setTokens(access: string, refresh: string, persistRefresh = true): void {
@@ -34,7 +47,8 @@ export const tokenStore = {
     refreshToken = refresh
     if (persistRefresh) {
       try {
-        sessionStorage.setItem(REFRESH_STORAGE_KEY, refresh)
+        localStorage.setItem(REFRESH_STORAGE_KEY, refresh)
+        sessionStorage.removeItem(LEGACY_SESSION_KEY)
       } catch {
         // ignore quota / private mode
       }
@@ -45,7 +59,8 @@ export const tokenStore = {
     accessToken = null
     refreshToken = null
     try {
-      sessionStorage.removeItem(REFRESH_STORAGE_KEY)
+      localStorage.removeItem(REFRESH_STORAGE_KEY)
+      sessionStorage.removeItem(LEGACY_SESSION_KEY)
     } catch {
       // ignore
     }

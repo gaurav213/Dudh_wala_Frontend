@@ -8,6 +8,7 @@ import {
   Typography,
 } from '@mui/material'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { Link as RouterLink, useParams } from 'react-router-dom'
 import { ErrorState } from '../../../components/feedback/ErrorState'
 import { LoadingState } from '../../../components/feedback/LoadingState'
@@ -16,6 +17,7 @@ import { formatCurrency, formatDate } from '../../../utils/format'
 import { suppliersApi } from '../api/suppliersApi'
 
 export function SupplierDetailPage() {
+  const { t } = useTranslation()
   const { id = '' } = useParams()
   const queryClient = useQueryClient()
   const query = useQuery({
@@ -37,7 +39,7 @@ export function SupplierDetailPage() {
   if (query.isError || !query.data) {
     return (
       <ErrorState
-        title="Supplier not found"
+        title={t('couldNotLoad')}
         message={(query.error as Error | undefined)?.message}
         onRetry={() => void query.refetch()}
       />
@@ -54,7 +56,7 @@ export function SupplierDetailPage() {
         actions={
           <Stack direction="row" spacing={1}>
             <Button component={RouterLink} to="/suppliers" variant="outlined">
-              Back
+              {t('back')}
             </Button>
             {supplier.status !== 'ACTIVE' ? (
               <Button
@@ -62,7 +64,7 @@ export function SupplierDetailPage() {
                 onClick={() => activateMutation.mutate()}
                 disabled={activateMutation.isPending}
               >
-                Activate
+                {t('active')}
               </Button>
             ) : (
               <Button
@@ -71,7 +73,7 @@ export function SupplierDetailPage() {
                 onClick={() => blockMutation.mutate()}
                 disabled={blockMutation.isPending}
               >
-                Block
+                {t('blocked')}
               </Button>
             )}
           </Stack>
@@ -83,15 +85,15 @@ export function SupplierDetailPage() {
           <Card variant="outlined">
             <CardContent>
               <Typography color="text.secondary" gutterBottom>
-                Profile
+                {t('profile')}
               </Typography>
               <Stack spacing={1}>
                 <Typography>
-                  Status: <StatusChip status={supplier.status} />
+                  {t('status')}: <StatusChip status={supplier.status} />
                 </Typography>
-                <Typography>Phone: {supplier.phone || '—'}</Typography>
-                <Typography>Address: {supplier.address || '—'}</Typography>
-                <Typography>Registered: {formatDate(supplier.createdAt)}</Typography>
+                <Typography>{t('mobileNumber')}: {supplier.phone || '—'}</Typography>
+                <Typography>{t('address')}: {supplier.address || '—'}</Typography>
+                <Typography>{t('status')}: {formatDate(supplier.createdAt)}</Typography>
               </Stack>
             </CardContent>
           </Card>
@@ -100,26 +102,26 @@ export function SupplierDetailPage() {
           <Card variant="outlined">
             <CardContent>
               <Typography color="text.secondary" gutterBottom>
-                Billing summary
+                {t('billing')}
               </Typography>
               <Grid container spacing={2}>
                 <Grid size={{ xs: 12, sm: 4 }}>
-                  <Typography variant="body2">Total billed</Typography>
+                  <Typography variant="body2">{t('total')} {t('billing')}</Typography>
                   <Typography fontWeight={700}>{formatCurrency(supplier.billing.totalBilled)}</Typography>
                 </Grid>
                 <Grid size={{ xs: 12, sm: 4 }}>
-                  <Typography variant="body2">Collected</Typography>
+                  <Typography variant="body2">{t('collected')}</Typography>
                   <Typography fontWeight={700}>
                     {formatCurrency(supplier.billing.totalCollected)}
                   </Typography>
                 </Grid>
                 <Grid size={{ xs: 12, sm: 4 }}>
-                  <Typography variant="body2">Outstanding</Typography>
+                  <Typography variant="body2">{t('outstanding')}</Typography>
                   <Typography fontWeight={700}>{formatCurrency(supplier.billing.outstanding)}</Typography>
                 </Grid>
               </Grid>
               <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                Last bill: {formatDate(supplier.billing.lastBillDate)}
+                {t('bills')}: {formatDate(supplier.billing.lastBillDate)}
               </Typography>
             </CardContent>
           </Card>
@@ -129,7 +131,7 @@ export function SupplierDetailPage() {
       <Card variant="outlined">
         <CardContent>
           <Typography fontWeight={700} sx={{ mb: 2 }}>
-            Customers ({supplier.customers.length})
+            {t('customers')} ({supplier.customers.length})
           </Typography>
           <Stack spacing={1}>
             {supplier.customers.map((c) => (
@@ -141,7 +143,7 @@ export function SupplierDetailPage() {
               </Stack>
             ))}
             {!supplier.customers.length ? (
-              <Typography color="text.secondary">No customers linked</Typography>
+              <Typography color="text.secondary">{t('noData')}</Typography>
             ) : null}
           </Stack>
         </CardContent>

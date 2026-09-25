@@ -3,24 +3,43 @@ import type {
   DashboardGrowthPoint,
   DashboardRevenuePoint,
   DashboardSummary,
-  FailedSync,
-  RecentRegistration,
+  FarmOwnerMonthSummary,
+  FarmOwnerTodaySummary,
 } from '../types/dashboard'
 
 export const dashboardApi = {
-  summary() {
+  async summary() {
     return apiGet<DashboardSummary>('/dashboard/admin/summary')
   },
-  growth() {
-    return apiGet<DashboardGrowthPoint[]>('/dashboard/admin/growth')
+  async growth() {
+    const data = await apiGet<{ supplierGrowth: Array<{ month: string; count: string }> }>(
+      '/dashboard/admin/growth',
+    )
+    return (data.supplierGrowth ?? []).map(
+      (row): DashboardGrowthPoint => ({
+        month: row.month,
+        count: Number(row.count),
+      }),
+    )
   },
-  revenue() {
-    return apiGet<DashboardRevenuePoint[]>('/dashboard/admin/revenue')
+  async revenue() {
+    const data = await apiGet<{
+      revenueByMonth: Array<{ month: string; revenue: string }>
+    }>('/dashboard/admin/revenue')
+    return (data.revenueByMonth ?? []).map(
+      (row): DashboardRevenuePoint => ({
+        month: row.month,
+        revenue: row.revenue,
+      }),
+    )
   },
-  recentRegistrations() {
-    return apiGet<RecentRegistration[]>('/dashboard/admin/recent-registrations')
+  farmToday() {
+    return apiGet<FarmOwnerTodaySummary>('/dashboard/supplier/today')
   },
-  failedSyncs() {
-    return apiGet<FailedSync[]>('/dashboard/admin/failed-syncs')
+  farmMonth(month?: string) {
+    return apiGet<FarmOwnerMonthSummary>(
+      '/dashboard/supplier/month',
+      month ? { month } : undefined,
+    )
   },
 }

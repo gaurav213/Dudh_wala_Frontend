@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next'
 import type { ApiErrorBody } from '../../types/api'
 
 export class ApiError extends Error {
@@ -66,4 +67,35 @@ export function mapAxiosError(error: unknown): ApiError {
     code: 'NETWORK_ERROR',
     message: axiosLike.message ?? 'Unable to reach the server',
   })
+}
+
+/** Map auth / network failures to localized user copy. */
+export function friendlyAuthError(error: unknown, t: TFunction): string {
+  const msg =
+    error instanceof ApiError
+      ? error.message
+      : error instanceof Error
+        ? error.message
+        : String(error)
+  const lower = msg.toLowerCase()
+  if (lower.includes('invalid credentials') || lower.includes('unauthorized')) {
+    return t('incorrectCredentials')
+  }
+  if (lower.includes('blocked')) return t('accountBlocked')
+  if (lower.includes('not active')) return t('accountNotActive')
+  if (
+    lower.includes('unreachable') ||
+    lower.includes('network') ||
+    lower.includes('timeout') ||
+    lower.includes('econnaborted')
+  ) {
+    return t('unableToReachServer')
+  }
+  if (error instanceof ApiError && error.code === 'NETWORK_ERROR') {
+    return t('unableToReachServer')
+  }
+  if (error instanceof ApiError && error.code === 'TIMEOUT') {
+    return t('pleaseTryAgain')
+  }
+  return t('signInFailed')
 }

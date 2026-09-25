@@ -22,9 +22,9 @@ vi.mock('../../../lib/auth/useAuth', async () => {
     useAuth: () => ({
       user: {
         id: '1',
-        email: 'admin@test.com',
-        fullName: 'Admin',
-        role: 'ADMIN',
+        name: 'Platform Owner',
+        mobileNumber: '919999999999',
+        role: 'PLATFORM_OWNER',
         status: 'ACTIVE',
       },
       isAuthenticated: true,

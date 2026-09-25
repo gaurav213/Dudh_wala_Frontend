@@ -1,10 +1,26 @@
-import { createTheme } from '@mui/material/styles'
+import { createTheme, type ThemeOptions } from '@mui/material/styles'
 
 /**
- * Doodh Khata admin theme — teal/slate dairy ledger aesthetic.
+ * Doodh Wala admin theme — teal/slate dairy marketplace aesthetic.
  * Intentionally avoids purple-on-white AI defaults.
+ *
+ * IMPORTANT: `lightTheme` is the existing default look. Do not change these
+ * light tokens when adding dark mode — dark is additive only.
  */
-export const theme = createTheme({
+
+const sharedTypography: ThemeOptions['typography'] = {
+  fontFamily: '"Plus Jakarta Sans", "Segoe UI", sans-serif',
+  h1: { fontFamily: '"Fraunces", Georgia, serif', fontWeight: 600 },
+  h2: { fontFamily: '"Fraunces", Georgia, serif', fontWeight: 600 },
+  h3: { fontFamily: '"Fraunces", Georgia, serif', fontWeight: 600 },
+  h4: { fontWeight: 700, letterSpacing: '-0.02em' },
+  h5: { fontWeight: 700, letterSpacing: '-0.01em' },
+  h6: { fontWeight: 600 },
+  button: { textTransform: 'none', fontWeight: 600 },
+}
+
+/** Current production light theme — frozen as the default. */
+export const lightTheme = createTheme({
   palette: {
     mode: 'light',
     primary: {
@@ -32,16 +48,7 @@ export const theme = createTheme({
     error: { main: '#DC2626' },
     divider: '#E2E8F0',
   },
-  typography: {
-    fontFamily: '"Plus Jakarta Sans", "Segoe UI", sans-serif',
-    h1: { fontFamily: '"Fraunces", Georgia, serif', fontWeight: 600 },
-    h2: { fontFamily: '"Fraunces", Georgia, serif', fontWeight: 600 },
-    h3: { fontFamily: '"Fraunces", Georgia, serif', fontWeight: 600 },
-    h4: { fontWeight: 700, letterSpacing: '-0.02em' },
-    h5: { fontWeight: 700, letterSpacing: '-0.01em' },
-    h6: { fontWeight: 600 },
-    button: { textTransform: 'none', fontWeight: 600 },
-  },
+  typography: sharedTypography,
   shape: { borderRadius: 10 },
   components: {
     MuiCssBaseline: {
@@ -96,3 +103,88 @@ export const theme = createTheme({
     },
   },
 })
+
+/** Additive dark theme — does not alter lightTheme tokens. */
+export const darkTheme = createTheme({
+  palette: {
+    mode: 'dark',
+    primary: {
+      main: '#2DD4BF',
+      light: '#5EEAD4',
+      dark: '#0F766E',
+      contrastText: '#042F2E',
+    },
+    secondary: {
+      main: '#94A3B8',
+      light: '#CBD5E1',
+      dark: '#64748B',
+      contrastText: '#0F172A',
+    },
+    background: {
+      default: '#0B1220',
+      paper: '#111827',
+    },
+    text: {
+      primary: '#E2E8F0',
+      secondary: '#94A3B8',
+    },
+    success: { main: '#34D399' },
+    warning: { main: '#FBBF24' },
+    error: { main: '#F87171' },
+    divider: '#1F2937',
+  },
+  typography: sharedTypography,
+  shape: { borderRadius: 10 },
+  components: {
+    MuiCssBaseline: {
+      styleOverrides: {
+        body: {
+          backgroundImage:
+            'radial-gradient(ellipse 80% 50% at 0% -20%, rgba(45, 212, 191, 0.08), transparent), radial-gradient(ellipse 60% 40% at 100% 0%, rgba(51, 65, 85, 0.2), transparent)',
+          backgroundAttachment: 'fixed',
+        },
+      },
+    },
+    MuiButton: {
+      defaultProps: { disableElevation: true },
+      styleOverrides: {
+        root: { borderRadius: 8 },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: { backgroundImage: 'none' },
+      },
+    },
+    MuiAppBar: {
+      styleOverrides: {
+        root: {
+          backgroundColor: '#0F172A',
+          backgroundImage: 'linear-gradient(90deg, #0F172A 0%, #115E59 100%)',
+        },
+      },
+    },
+    MuiDrawer: {
+      styleOverrides: {
+        paper: {
+          borderRight: '1px solid #1F2937',
+          backgroundColor: '#111827',
+        },
+      },
+    },
+    MuiTableHead: {
+      styleOverrides: {
+        root: {
+          '& .MuiTableCell-head': {
+            fontWeight: 700,
+            color: '#CBD5E1',
+            backgroundColor: '#0F172A',
+          },
+        },
+      },
+    },
+  },
+})
+
+/** @deprecated Prefer lightTheme — kept for any legacy imports. */
+export const theme = lightTheme

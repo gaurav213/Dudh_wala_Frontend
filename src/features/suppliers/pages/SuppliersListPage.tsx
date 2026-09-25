@@ -8,6 +8,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createColumnHelper } from '@tanstack/react-table'
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link as RouterLink } from 'react-router-dom'
 import { ErrorState } from '../../../components/feedback/ErrorState'
 import { DataTable, PageHeader, StatusChip } from '../../../components/tables/DataTable'
@@ -26,6 +27,7 @@ const defaultFilters = {
 }
 
 export function SuppliersListPage() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [filters, setFilters] = useQueryFilters(defaultFilters)
 
@@ -52,30 +54,30 @@ export function SuppliersListPage() {
   const columns = useMemo(
     () => [
       columnHelper.accessor('fullName', {
-        header: 'Name',
+        header: t('name'),
         cell: (info) => (
           <Button component={RouterLink} to={`/suppliers/${info.row.original.id}`} size="small">
             {info.getValue()}
           </Button>
         ),
       }),
-      columnHelper.accessor('email', { header: 'Email' }),
+      columnHelper.accessor('email', { header: t('emailOptional') }),
       columnHelper.accessor('phone', {
-        header: 'Phone',
+        header: t('mobileNumber'),
         cell: (info) => info.getValue() || '—',
       }),
       columnHelper.accessor('status', {
-        header: 'Status',
+        header: t('status'),
         cell: (info) => <StatusChip status={info.getValue()} />,
       }),
-      columnHelper.accessor('customerCount', { header: 'Customers' }),
+      columnHelper.accessor('customerCount', { header: t('customers') }),
       columnHelper.accessor('createdAt', {
-        header: 'Registered',
+        header: t('status'),
         cell: (info) => formatDate(info.getValue()),
       }),
       columnHelper.display({
         id: 'actions',
-        header: 'Actions',
+        header: t('more'),
         cell: ({ row }) => (
           <Stack direction="row" spacing={1}>
             {row.original.status !== 'ACTIVE' ? (
@@ -84,7 +86,7 @@ export function SuppliersListPage() {
                 onClick={() => activateMutation.mutate(row.original.id)}
                 disabled={activateMutation.isPending}
               >
-                Activate
+                {t('active')}
               </Button>
             ) : (
               <Button
@@ -93,20 +95,20 @@ export function SuppliersListPage() {
                 onClick={() => blockMutation.mutate(row.original.id)}
                 disabled={blockMutation.isPending}
               >
-                Block
+                {t('blocked')}
               </Button>
             )}
           </Stack>
         ),
       }),
     ],
-    [activateMutation, blockMutation],
+    [activateMutation, blockMutation, t],
   )
 
   if (query.isError) {
     return (
       <ErrorState
-        title="Failed to load suppliers"
+        title={t('couldNotLoad')}
         message={(query.error as Error).message}
         onRetry={() => void query.refetch()}
       />
@@ -115,37 +117,37 @@ export function SuppliersListPage() {
 
   return (
     <Box>
-      <PageHeader title="Suppliers" subtitle="Search, filter, activate or block supplier accounts" />
+      <PageHeader title={t('navLegacySuppliers')} subtitle={`${t('search')} · ${t('filter')}`} />
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }}>
         <TextField
-          label="Search"
+          label={t('search')}
           size="small"
           value={filters.search}
           onChange={(e) => setFilters({ search: e.target.value, page: '1' })}
           fullWidth
-          inputProps={{ 'aria-label': 'Search suppliers' }}
+          inputProps={{ 'aria-label': t('search') }}
         />
         <TextField
           select
-          label="Status"
+          label={t('status')}
           size="small"
           value={filters.status}
           onChange={(e) => setFilters({ status: e.target.value, page: '1' })}
           sx={{ minWidth: 160 }}
-          inputProps={{ 'aria-label': 'Filter by status' }}
+          inputProps={{ 'aria-label': t('filter') }}
         >
-          <MenuItem value="">All</MenuItem>
-          <MenuItem value="ACTIVE">Active</MenuItem>
-          <MenuItem value="INACTIVE">Inactive</MenuItem>
-          <MenuItem value="BLOCKED">Blocked</MenuItem>
-          <MenuItem value="PENDING">Pending</MenuItem>
+          <MenuItem value="">{t('all')}</MenuItem>
+          <MenuItem value="ACTIVE">{t('active')}</MenuItem>
+          <MenuItem value="INACTIVE">{t('cancelled')}</MenuItem>
+          <MenuItem value="BLOCKED">{t('blocked')}</MenuItem>
+          <MenuItem value="PENDING">{t('pending')}</MenuItem>
         </TextField>
       </Stack>
       <DataTable
         columns={columns}
         data={query.data?.data ?? []}
         isLoading={query.isLoading}
-        emptyTitle="No suppliers match these filters"
+        emptyTitle={t('noData')}
         page={Number(filters.page) || 1}
         limit={Number(filters.limit) || 20}
         total={query.data?.meta.total ?? 0}

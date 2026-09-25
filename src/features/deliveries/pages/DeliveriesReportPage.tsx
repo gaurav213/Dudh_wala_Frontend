@@ -3,6 +3,7 @@ import { FileDownloadOutlined } from '@mui/icons-material'
 import { useQuery } from '@tanstack/react-query'
 import { createColumnHelper } from '@tanstack/react-table'
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ErrorState } from '../../../components/feedback/ErrorState'
 import { DataTable, PageHeader, StatusChip } from '../../../components/tables/DataTable'
 import { useQueryFilters } from '../../../hooks/useQueryFilters'
@@ -22,6 +23,7 @@ const defaultFilters = {
 }
 
 export function DeliveriesReportPage() {
+  const { t } = useTranslation()
   const [filters, setFilters] = useQueryFilters(defaultFilters)
 
   const query = useQuery({
@@ -41,27 +43,27 @@ export function DeliveriesReportPage() {
   const columns = useMemo(
     () => [
       columnHelper.accessor('date', {
-        header: 'Date',
+        header: t('day'),
         cell: (i) => formatDate(i.getValue()),
       }),
-      columnHelper.accessor('supplierName', { header: 'Supplier' }),
-      columnHelper.accessor('customerName', { header: 'Customer' }),
+      columnHelper.accessor('supplierName', { header: t('farm') }),
+      columnHelper.accessor('customerName', { header: t('customer') }),
       columnHelper.accessor('quantityLiters', {
-        header: 'Quantity',
+        header: t('quantityL'),
         cell: (i) => formatLiters(i.getValue()),
       }),
       columnHelper.accessor('status', {
-        header: 'Status',
+        header: t('status'),
         cell: (i) => <StatusChip status={i.getValue()} />,
       }),
     ],
-    [],
+    [t],
   )
 
   const exportCsv = () => {
     const rows = query.data?.data ?? []
     downloadCsv('deliveries-report.csv', [
-      ['Date', 'Supplier', 'Customer', 'Quantity (L)', 'Status'],
+      [t('day'), t('farm'), t('customer'), t('quantityL'), t('status')],
       ...rows.map((r) => [
         r.date,
         r.supplierName,
@@ -75,7 +77,7 @@ export function DeliveriesReportPage() {
   if (query.isError) {
     return (
       <ErrorState
-        title="Failed to load deliveries"
+        title={t('couldNotLoad')}
         message={(query.error as Error).message}
         onRetry={() => void query.refetch()}
       />
@@ -85,8 +87,8 @@ export function DeliveriesReportPage() {
   return (
     <Box>
       <PageHeader
-        title="Deliveries"
-        subtitle="Filtered delivery report with server-side pagination"
+        title={t('deliveries')}
+        subtitle={`${t('filter')} · ${t('navReports')}`}
         actions={
           <Button
             startIcon={<FileDownloadOutlined />}
@@ -94,13 +96,13 @@ export function DeliveriesReportPage() {
             onClick={exportCsv}
             disabled={!query.data?.data.length}
           >
-            Export CSV
+            {t('download')}
           </Button>
         }
       />
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mb: 2 }} flexWrap="wrap">
         <TextField
-          label="From"
+          label={t('from')}
           type="date"
           size="small"
           InputLabelProps={{ shrink: true }}
@@ -108,7 +110,7 @@ export function DeliveriesReportPage() {
           onChange={(e) => setFilters({ from: e.target.value, page: '1' })}
         />
         <TextField
-          label="To"
+          label={t('to')}
           type="date"
           size="small"
           InputLabelProps={{ shrink: true }}
@@ -116,29 +118,29 @@ export function DeliveriesReportPage() {
           onChange={(e) => setFilters({ to: e.target.value, page: '1' })}
         />
         <TextField
-          label="Supplier ID"
+          label={t('farm')}
           size="small"
           value={filters.supplierId}
           onChange={(e) => setFilters({ supplierId: e.target.value, page: '1' })}
         />
         <TextField
-          label="Customer ID"
+          label={t('customer')}
           size="small"
           value={filters.customerId}
           onChange={(e) => setFilters({ customerId: e.target.value, page: '1' })}
         />
         <TextField
           select
-          label="Status"
+          label={t('status')}
           size="small"
           value={filters.status}
           onChange={(e) => setFilters({ status: e.target.value, page: '1' })}
           sx={{ minWidth: 140 }}
         >
-          <MenuItem value="">All</MenuItem>
-          <MenuItem value="DELIVERED">Delivered</MenuItem>
-          <MenuItem value="MISSED">Missed</MenuItem>
-          <MenuItem value="PARTIAL">Partial</MenuItem>
+          <MenuItem value="">{t('all')}</MenuItem>
+          <MenuItem value="DELIVERED">{t('delivered')}</MenuItem>
+          <MenuItem value="MISSED">{t('failed')}</MenuItem>
+          <MenuItem value="PARTIAL">{t('less')}</MenuItem>
         </TextField>
       </Stack>
       <DataTable

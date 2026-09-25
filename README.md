@@ -1,6 +1,7 @@
-# Doodh Khata Admin Web
+# Doodh Wala Admin Web (`doodh-khata-web`)
 
-React + Vite + TypeScript admin console for **Doodh Khata** — managing suppliers, customers, deliveries, billing, payments, and audit logs.
+React + Vite + TypeScript console for **Doodh Wala** — farms, customers, deliveries, billing, payments, and audit logs.
+Repository name remains `doodh-khata-web` for deployment continuity.
 
 ## Stack
 
@@ -90,7 +91,7 @@ All paths are relative to `VITE_API_BASE_URL` (includes `/api/v1`).
 
 ## Pages
 
-- `/login` — admin login
+- `/login` — platform owner login (mobile + password)
 - `/` — dashboard KPIs + growth/revenue charts
 - `/suppliers`, `/suppliers/:id` — list/filter, activate/block, customers & billing summary
 - `/customers`, `/customers/:id` — list/filter, delivery/bill/payment history
@@ -102,7 +103,7 @@ All paths are relative to `VITE_API_BASE_URL` (includes `/api/v1`).
 - `/settings` — placeholder
 - `/session-expired`, `/unauthorized`
 
-Nav is role-gated to `ADMIN`.
+Nav is role-gated to `PLATFORM_OWNER`. Seed login: mobile `9999999999` / `Admin@12345`.
 
 ## Deployment (Vercel)
 

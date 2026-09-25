@@ -24,7 +24,7 @@ describe('Protected routes', () => {
     renderWithProviders(
       <Routes>
         <Route path="/login" element={<div>Login screen</div>} />
-        <Route element={<ProtectedRoute roles={['ADMIN']} />}>
+        <Route element={<ProtectedRoute roles={['PLATFORM_OWNER', 'FARM_OWNER']} />}>
           <Route path="/" element={<div>Secret dashboard</div>} />
         </Route>
       </Routes>,
@@ -35,24 +35,26 @@ describe('Protected routes', () => {
     expect(screen.queryByText('Secret dashboard')).not.toBeInTheDocument()
   })
 
-  it('allows ADMIN users through after session restore', async () => {
+  it('allows PLATFORM_OWNER users through after session restore', async () => {
     tokenStore.setTokens('access', 'refresh')
     vi.mocked(authApiModule.authApi.refresh).mockResolvedValue({
       accessToken: 'access',
       refreshToken: 'refresh',
     })
     vi.mocked(authApiModule.authApi.profile).mockResolvedValue({
-      id: '1',
-      email: 'admin@doodhkhata.app',
-      fullName: 'Admin',
-      role: 'ADMIN',
-      status: 'ACTIVE',
+      user: {
+        id: '1',
+        name: 'Platform Owner',
+        mobileNumber: '919999999999',
+        role: 'PLATFORM_OWNER',
+        status: 'ACTIVE',
+      },
     })
 
     renderWithProviders(
       <Routes>
         <Route path="/login" element={<div>Login screen</div>} />
-        <Route element={<ProtectedRoute roles={['ADMIN']} />}>
+        <Route element={<ProtectedRoute roles={['PLATFORM_OWNER', 'FARM_OWNER']} />}>
           <Route path="/" element={<div>Secret dashboard</div>} />
         </Route>
       </Routes>,
@@ -64,30 +66,92 @@ describe('Protected routes', () => {
     })
   })
 
-  it('sends non-admin users to unauthorized', async () => {
+  it('allows FARM_OWNER users through', async () => {
     tokenStore.setTokens('access', 'refresh')
     vi.mocked(authApiModule.authApi.refresh).mockResolvedValue({
       accessToken: 'access',
       refreshToken: 'refresh',
     })
     vi.mocked(authApiModule.authApi.profile).mockResolvedValue({
-      id: '2',
-      email: 'supplier@doodhkhata.app',
-      fullName: 'Supplier',
-      role: 'SUPPLIER',
-      status: 'ACTIVE',
+      user: {
+        id: '2',
+        name: 'Farm Owner',
+        mobileNumber: '919888888888',
+        role: 'FARM_OWNER',
+        status: 'ACTIVE',
+      },
     })
 
     renderWithProviders(
       <Routes>
         <Route path="/unauthorized" element={<div>Unauthorized screen</div>} />
-        <Route element={<ProtectedRoute roles={['ADMIN']} />}>
+        <Route element={<ProtectedRoute roles={['PLATFORM_OWNER', 'FARM_OWNER']} />}>
           <Route path="/" element={<div>Secret dashboard</div>} />
         </Route>
       </Routes>,
       { route: '/' },
     )
 
-    expect(await screen.findByText('Unauthorized screen')).toBeInTheDocument()
+    expect(await screen.findByText('Secret dashboard')).toBeInTheDocument()
+  })
+
+  it('sends customer users to customer dashboard route', async () => {
+    tokenStore.setTokens('access', 'refresh')
+    vi.mocked(authApiModule.authApi.refresh).mockResolvedValue({
+      accessToken: 'access',
+      refreshToken: 'refresh',
+    })
+    vi.mocked(authApiModule.authApi.profile).mockResolvedValue({
+      user: {
+        id: '3',
+        name: 'Customer',
+        mobileNumber: '919777777777',
+        role: 'CUSTOMER',
+        status: 'ACTIVE',
+      },
+    })
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/customer" element={<div>Customer dashboard</div>} />
+        <Route element={<ProtectedRoute roles={['PLATFORM_OWNER', 'FARM_OWNER']} />}>
+          <Route path="/" element={<div>Secret dashboard</div>} />
+        </Route>
+      </Routes>,
+      { route: '/' },
+    )
+
+    expect(await screen.findByText('Customer dashboard')).toBeInTheDocument()
+  })
+
+  it('sends delivery staff to /delivery instead of looping on /customer', async () => {
+    tokenStore.setTokens('access', 'refresh')
+    vi.mocked(authApiModule.authApi.refresh).mockResolvedValue({
+      accessToken: 'access',
+      refreshToken: 'refresh',
+    })
+    vi.mocked(authApiModule.authApi.profile).mockResolvedValue({
+      user: {
+        id: '4',
+        name: 'Delivery Staff',
+        mobileNumber: '919777000003',
+        role: 'DELIVERY_STAFF',
+        status: 'ACTIVE',
+      },
+    })
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/delivery" element={<div>Delivery dashboard</div>} />
+        <Route path="/customer" element={<div>Customer dashboard</div>} />
+        <Route element={<ProtectedRoute roles={['CUSTOMER']} />}>
+          <Route path="/customer-only" element={<div>Customer only</div>} />
+        </Route>
+      </Routes>,
+      { route: '/customer-only' },
+    )
+
+    expect(await screen.findByText('Delivery dashboard')).toBeInTheDocument()
+    expect(screen.queryByText('Customer dashboard')).not.toBeInTheDocument()
   })
 })

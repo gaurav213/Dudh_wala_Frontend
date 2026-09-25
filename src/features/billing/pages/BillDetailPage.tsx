@@ -1,5 +1,6 @@
 import { Box, Button, Card, CardContent, Grid2 as Grid, Stack, Typography } from '@mui/material'
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { Link as RouterLink, useParams } from 'react-router-dom'
 import { ErrorState } from '../../../components/feedback/ErrorState'
 import { LoadingState } from '../../../components/feedback/LoadingState'
@@ -8,6 +9,7 @@ import { formatCurrency, formatDate, formatLiters } from '../../../utils/format'
 import { billingApi } from '../api/billingApi'
 
 export function BillDetailPage() {
+  const { t } = useTranslation()
   const { id = '' } = useParams()
   const query = useQuery({
     queryKey: ['bills', id],
@@ -19,7 +21,7 @@ export function BillDetailPage() {
   if (query.isError || !query.data) {
     return (
       <ErrorState
-        title="Bill not found"
+        title={t('couldNotLoad')}
         message={(query.error as Error | undefined)?.message}
         onRetry={() => void query.refetch()}
       />
@@ -31,30 +33,30 @@ export function BillDetailPage() {
   return (
     <Box>
       <PageHeader
-        title={`Bill ${bill.id.slice(0, 8)}`}
+        title={`${t('bills')} ${bill.id.slice(0, 8)}`}
         subtitle={`${bill.customerName} · ${bill.supplierName}`}
         actions={
           <Button component={RouterLink} to="/billing" variant="outlined">
-            Back
+            {t('back')}
           </Button>
         }
       />
 
       <Grid container spacing={2} sx={{ mb: 2 }}>
         <Grid size={{ xs: 12, md: 3 }}>
-          <Metric label="Amount" value={formatCurrency(bill.amount)} />
+          <Metric label={t('amount')} value={formatCurrency(bill.amount)} />
         </Grid>
         <Grid size={{ xs: 12, md: 3 }}>
-          <Metric label="Paid" value={formatCurrency(bill.paidAmount)} />
+          <Metric label={t('collected')} value={formatCurrency(bill.paidAmount)} />
         </Grid>
         <Grid size={{ xs: 12, md: 3 }}>
-          <Metric label="Outstanding" value={formatCurrency(bill.outstandingAmount)} />
+          <Metric label={t('outstanding')} value={formatCurrency(bill.outstandingAmount)} />
         </Grid>
         <Grid size={{ xs: 12, md: 3 }}>
           <Card variant="outlined">
             <CardContent>
               <Typography variant="body2" color="text.secondary">
-                Status
+                {t('status')}
               </Typography>
               <StatusChip status={bill.status} />
               <Typography variant="caption" display="block" sx={{ mt: 1 }}>
@@ -70,7 +72,7 @@ export function BillDetailPage() {
           <Card variant="outlined">
             <CardContent>
               <Typography fontWeight={700} sx={{ mb: 2 }}>
-                Line items
+                {t('details')}
               </Typography>
               <Stack spacing={1.5}>
                 {bill.lineItems.map((item, idx) => (
@@ -92,7 +94,7 @@ export function BillDetailPage() {
           <Card variant="outlined">
             <CardContent>
               <Typography fontWeight={700} sx={{ mb: 2 }}>
-                Payments
+                {t('payments')}
               </Typography>
               <Stack spacing={1.5}>
                 {bill.payments.map((p) => (
@@ -104,7 +106,7 @@ export function BillDetailPage() {
                   </Box>
                 ))}
                 {!bill.payments.length ? (
-                  <Typography color="text.secondary">No payments recorded</Typography>
+                  <Typography color="text.secondary">{t('noData')}</Typography>
                 ) : null}
               </Stack>
             </CardContent>

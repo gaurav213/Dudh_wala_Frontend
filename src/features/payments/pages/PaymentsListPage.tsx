@@ -2,6 +2,7 @@ import { Box, MenuItem, Stack, TextField } from '@mui/material'
 import { useQuery } from '@tanstack/react-query'
 import { createColumnHelper } from '@tanstack/react-table'
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ErrorState } from '../../../components/feedback/ErrorState'
 import { DataTable, PageHeader, StatusChip } from '../../../components/tables/DataTable'
 import { useQueryFilters } from '../../../hooks/useQueryFilters'
@@ -22,6 +23,7 @@ const defaultFilters = {
 }
 
 export function PaymentsListPage() {
+  const { t } = useTranslation()
   const [filters, setFilters] = useQueryFilters(defaultFilters)
 
   const query = useQuery({
@@ -42,32 +44,32 @@ export function PaymentsListPage() {
   const columns = useMemo(
     () => [
       columnHelper.accessor('paidAt', {
-        header: 'Date',
+        header: t('day'),
         cell: (i) => formatDate(i.getValue()),
       }),
-      columnHelper.accessor('customerName', { header: 'Customer' }),
-      columnHelper.accessor('supplierName', { header: 'Supplier' }),
+      columnHelper.accessor('customerName', { header: t('customer') }),
+      columnHelper.accessor('supplierName', { header: t('farm') }),
       columnHelper.accessor('amount', {
-        header: 'Amount',
+        header: t('amount'),
         cell: (i) => formatCurrency(i.getValue()),
       }),
-      columnHelper.accessor('method', { header: 'Method' }),
+      columnHelper.accessor('method', { header: t('payment') }),
       columnHelper.accessor('status', {
-        header: 'Status',
+        header: t('status'),
         cell: (i) => <StatusChip status={i.getValue()} />,
       }),
       columnHelper.accessor('reference', {
-        header: 'Reference',
+        header: t('details'),
         cell: (i) => i.getValue() || '—',
       }),
     ],
-    [],
+    [t],
   )
 
   if (query.isError) {
     return (
       <ErrorState
-        title="Failed to load payments"
+        title={t('couldNotLoad')}
         message={(query.error as Error).message}
         onRetry={() => void query.refetch()}
       />
@@ -76,36 +78,36 @@ export function PaymentsListPage() {
 
   return (
     <Box>
-      <PageHeader title="Payments" subtitle="Collection history across the network" />
+      <PageHeader title={t('payments')} subtitle={t('history')} />
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mb: 2 }}>
         <TextField
           select
-          label="Status"
+          label={t('status')}
           size="small"
           value={filters.status}
           onChange={(e) => setFilters({ status: e.target.value, page: '1' })}
           sx={{ minWidth: 140 }}
         >
-          <MenuItem value="">All</MenuItem>
-          <MenuItem value="SUCCESS">Success</MenuItem>
-          <MenuItem value="PENDING">Pending</MenuItem>
-          <MenuItem value="FAILED">Failed</MenuItem>
+          <MenuItem value="">{t('all')}</MenuItem>
+          <MenuItem value="SUCCESS">{t('success')}</MenuItem>
+          <MenuItem value="PENDING">{t('pending')}</MenuItem>
+          <MenuItem value="FAILED">{t('failed')}</MenuItem>
         </TextField>
         <TextField
           select
-          label="Method"
+          label={t('payment')}
           size="small"
           value={filters.method}
           onChange={(e) => setFilters({ method: e.target.value, page: '1' })}
           sx={{ minWidth: 140 }}
         >
-          <MenuItem value="">All</MenuItem>
-          <MenuItem value="CASH">Cash</MenuItem>
+          <MenuItem value="">{t('all')}</MenuItem>
+          <MenuItem value="CASH">{t('recordCash')}</MenuItem>
           <MenuItem value="UPI">UPI</MenuItem>
           <MenuItem value="BANK">Bank</MenuItem>
         </TextField>
         <TextField
-          label="Supplier ID"
+          label={t('farm')}
           size="small"
           value={filters.supplierId}
           onChange={(e) => setFilters({ supplierId: e.target.value, page: '1' })}

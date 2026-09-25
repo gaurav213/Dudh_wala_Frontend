@@ -7,7 +7,10 @@ import { env } from '../../config/env'
 import { tokenStore } from '../auth/tokenStore'
 import { ApiError, mapAxiosError } from './errors'
 
-type RetriableConfig = InternalAxiosRequestConfig & { _retry?: boolean }
+type RetriableConfig = InternalAxiosRequestConfig & {
+  _retry?: boolean
+  _skipAuthRefresh?: boolean
+}
 
 let refreshPromise: Promise<string | null> | null = null
 let onUnauthorized: (() => void) | null = null
@@ -21,12 +24,29 @@ export function setAuthHandlers(handlers: {
   onForbidden = handlers.onForbidden ?? null
 }
 
-async function refreshAccessToken(client: AxiosInstance): Promise<string | null> {
+function isAuthPath(url?: string): boolean {
+  if (!url) return false
+  return (
+    url.includes('/auth/login') ||
+    url.includes('/auth/refresh') ||
+    url.includes('/auth/register') ||
+    url.includes('/auth/logout')
+  )
+}
+
+/** Bare client — no interceptors — used only for token refresh. */
+const refreshClient: AxiosInstance = axios.create({
+  baseURL: env.apiBaseUrl,
+  timeout: 30_000,
+  headers: { 'Content-Type': 'application/json' },
+})
+
+async function refreshAccessToken(): Promise<string | null> {
   const refresh = tokenStore.getRefreshToken()
   if (!refresh) return null
 
   try {
-    const { data } = await client.post<{
+    const { data } = await refreshClient.post<{
       data: { accessToken: string; refreshToken?: string }
     }>('/auth/refresh', { refreshToken: refresh })
 
@@ -34,15 +54,19 @@ async function refreshAccessToken(client: AxiosInstance): Promise<string | null>
     const nextRefresh = data.data.refreshToken ?? refresh
     tokenStore.setTokens(nextAccess, nextRefresh)
     return nextAccess
-  } catch {
-    tokenStore.clear()
+  } catch (err) {
+    // Only wipe the session when the server rejects the refresh token.
+    const status = axios.isAxiosError(err) ? err.response?.status : undefined
+    if (status === 401 || status === 403) {
+      tokenStore.clear()
+    }
     return null
   }
 }
 
-function ensureRefresh(client: AxiosInstance): Promise<string | null> {
+export function ensureRefresh(): Promise<string | null> {
   if (!refreshPromise) {
-    refreshPromise = refreshAccessToken(client).finally(() => {
+    refreshPromise = refreshAccessToken().finally(() => {
       refreshPromise = null
     })
   }
@@ -55,10 +79,18 @@ export const apiClient: AxiosInstance = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
-apiClient.interceptors.request.use((config) => {
-  const token = tokenStore.getAccessToken()
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+apiClient.interceptors.request.use(async (config) => {
+  if (!isAuthPath(config.url)) {
+    const access = tokenStore.getAccessToken()
+    // If we have a refresh token but no access token (tab reload), refresh first.
+    if (!access && tokenStore.getRefreshToken()) {
+      const next = await ensureRefresh()
+      if (next) {
+        config.headers.Authorization = `Bearer ${next}`
+      }
+    } else if (access) {
+      config.headers.Authorization = `Bearer ${access}`
+    }
   }
   if (env.enableApiLogs) {
     console.debug('[api]', config.method?.toUpperCase(), config.url, config.params ?? '')
@@ -77,9 +109,15 @@ apiClient.interceptors.response.use(
     const config = error.config as RetriableConfig | undefined
     const status = error.response?.status
 
-    if (status === 401 && config && !config._retry) {
+    if (
+      status === 401 &&
+      config &&
+      !config._retry &&
+      !config._skipAuthRefresh &&
+      !isAuthPath(config.url)
+    ) {
       config._retry = true
-      const next = await ensureRefresh(apiClient)
+      const next = await ensureRefresh()
       if (next) {
         config.headers.Authorization = `Bearer ${next}`
         return apiClient.request(config)
