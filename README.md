@@ -117,7 +117,11 @@ Nav is role-gated to `PLATFORM_OWNER`. Seed login: mobile `9999999999` / `Admin@
 
 ## Deployment (Vercel)
 
-`vercel.json` rewrites all routes to `index.html` for SPA routing. Set Vite env vars in the Vercel project settings.
+1. Import `https://github.com/gaurav213/Dudh_wala_Frontend` in Vercel (Framework Preset: Vite, Root Directory: `.`).
+2. Leave env vars empty — `npm run build` already reads `.env.production` and points the API at `https://dudh-wala-backend.onrender.com/api/v1`.
+3. After the first deploy, copy the Vercel URL (e.g. `https://dudh-wala-frontend.vercel.app`) and add it to Render `CORS_ORIGINS` (comma-separated with any other web origins).
+
+`vercel.json` rewrites all routes to `index.html` for SPA routing.
 
 ## Project structure
 
