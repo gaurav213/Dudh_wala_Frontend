@@ -5,6 +5,10 @@ import {
   Card,
   CardContent,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   MenuItem,
   Stack,
   TextField,
@@ -80,6 +84,12 @@ export function CustomerFarmDetailPage() {
     queryFn: customerApi.addresses,
   })
 
+  const requestsQuery = useQuery({
+    queryKey: ['customer', 'service-requests'],
+    queryFn: () => customerApi.myServiceRequests({ limit: 50 }),
+    staleTime: 0,
+  })
+
   const [productId, setProductId] = useState('')
   const [quantity, setQuantity] = useState('1')
   const [deliveryShift, setDeliveryShift] = useState<DeliveryShift>('MORNING')
@@ -89,6 +99,7 @@ export function CustomerFarmDetailPage() {
   const [instructions, setInstructions] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [requestOpen, setRequestOpen] = useState(false)
   const [reviewRating, setReviewRating] = useState(5)
   const [reviewComment, setReviewComment] = useState('')
   const [reviewError, setReviewError] = useState<string | null>(null)
@@ -106,14 +117,31 @@ export function CustomerFarmDetailPage() {
 
   const requestMutation = useMutation({
     mutationFn: (payload: CreateServiceRequestPayload) => customerApi.createServiceRequest(payload),
-    onSuccess: () => {
+    onSuccess: async () => {
       setSuccess(true)
       setFormError(null)
-      void queryClient.invalidateQueries({ queryKey: ['customer', 'service-requests'] })
+      await refreshQueries(queryClient, [['customer', 'service-requests']])
     },
     onError: (err) =>
       setFormError(isApiError(err) ? err.message : t('somethingWentWrong')),
   })
+
+  const openRequest = (nextProductId?: string) => {
+    const chosen = nextProductId || productId || products[0]?.id || ''
+    if (chosen) {
+      setProductId(chosen)
+      const product = products.find((p) => p.id === chosen)
+      if (product?.minimumQuantity) setQuantity(String(product.minimumQuantity))
+    }
+    const addresses = addressesQuery.data ?? []
+    if (!addressId && addresses.length) {
+      const preferred = addresses.find((a) => a.isDefault) ?? addresses[0]
+      setAddressId(preferred.id)
+    }
+    setSuccess(false)
+    setFormError(null)
+    setRequestOpen(true)
+  }
 
   const reviewMutation = useMutation({
     mutationFn: () =>
@@ -211,7 +239,14 @@ export function CustomerFarmDetailPage() {
             </Typography>
           ) : (
             <Stack spacing={1.5}>
-              {products.map((p) => (
+              {products.map((p) => {
+                const match = (requestsQuery.data?.data ?? []).find(
+                  (r) =>
+                    r.farmId === farm.id &&
+                    r.productId === p.id &&
+                    (r.status === 'PENDING' || r.status === 'ACCEPTED'),
+                )
+                return (
                 <Stack
                   key={p.id}
                   direction="row"
@@ -224,12 +259,28 @@ export function CustomerFarmDetailPage() {
                   <Chip size="small" label={p.milkType} />
                   <Typography variant="body2">{formatCurrency(p.currentRatePerLitre)}/L</Typography>
                   <Typography variant="body2" color="text.secondary">
-                    min {formatLiters(p.minimumQuantity)}
+                    {match
+                      ? `${formatLiters(match.quantity)} · min ${formatLiters(p.minimumQuantity)}`
+                      : `min ${formatLiters(p.minimumQuantity)}`}
                     {p.maximumQuantity ? ` · max ${formatLiters(p.maximumQuantity)}` : ''} ·{' '}
                     {p.availableShifts.map((shift) => t(deliveryShiftKey(shift))).join(', ')}
                   </Typography>
+                  {match ? (
+                    <Chip
+                      size="small"
+                      color={match.status === 'PENDING' ? 'warning' : 'success'}
+                      label={
+                        match.status === 'PENDING' ? t('pending') : t('connected')
+                      }
+                    />
+                  ) : (
+                    <Button size="small" variant="contained" onClick={() => openRequest(p.id)}>
+                      {t('requestMilk')}
+                    </Button>
+                  )}
                 </Stack>
-              ))}
+                )
+              })}
             </Stack>
           )}
         </CardContent>
@@ -308,31 +359,33 @@ export function CustomerFarmDetailPage() {
         </CardContent>
       </Card>
 
-      <Card variant="outlined">
-        <CardContent>
-          <Typography fontWeight={700} sx={{ mb: 2 }}>
-            {t('requestMilk')}
-          </Typography>
-
+      <Dialog
+        open={requestOpen}
+        onClose={() => !requestMutation.isPending && setRequestOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>{t('requestMilk')}</DialogTitle>
+        <DialogContent>
           {success ? (
-            <Alert severity="success" sx={{ mb: 2 }}>
+            <Alert severity="success" sx={{ mb: 2, mt: 1 }}>
               {t('success')} · {t('navInbox')}
             </Alert>
           ) : null}
           {formError ? (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert severity="error" sx={{ mb: 2, mt: success ? 0 : 1 }}>
               {formError}
             </Alert>
           ) : null}
 
           {!addressesQuery.data?.length ? (
-            <Alert severity="info">
+            <Alert severity="info" sx={{ mt: 1 }}>
               {t('add')} {t('address')}
             </Alert>
           ) : products.length === 0 ? (
-            <Alert severity="info">{t('noData')}</Alert>
+            <Alert severity="info" sx={{ mt: 1 }}>{t('noData')}</Alert>
           ) : (
-            <Stack spacing={2.5} sx={{ maxWidth: 560 }}>
+            <Stack spacing={2.5} sx={{ mt: 1 }}>
               {selectedProduct ? (
                 <Alert severity="success" icon={false} sx={{ py: 1.25 }}>
                   <Typography fontWeight={700}>{selectedProduct.name}</Typography>
@@ -441,18 +494,25 @@ export function CustomerFarmDetailPage() {
                 multiline
                 minRows={3}
               />
-              <Button
-                variant="contained"
-                onClick={onSubmit}
-                disabled={requestMutation.isPending}
-                sx={{ alignSelf: { xs: 'stretch', sm: 'flex-start' }, minWidth: 180 }}
-              >
-                {requestMutation.isPending ? t('loading') : t('submitRequest')}
-              </Button>
             </Stack>
           )}
-        </CardContent>
-      </Card>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => setRequestOpen(false)}
+            disabled={requestMutation.isPending}
+          >
+            {t('cancel')}
+          </Button>
+          <Button
+            variant="contained"
+            onClick={onSubmit}
+            disabled={requestMutation.isPending || !addressesQuery.data?.length || products.length === 0}
+          >
+            {requestMutation.isPending ? t('loading') : t('submitRequest')}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }

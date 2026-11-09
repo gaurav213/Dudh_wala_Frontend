@@ -17,6 +17,7 @@ import { ErrorState } from '../../../components/feedback/ErrorState'
 import { LoadingState } from '../../../components/feedback/LoadingState'
 import { PageHeader } from '../../../components/tables/DataTable'
 import { isApiError } from '../../../lib/api/client'
+import { reverseGeocode } from '../../../utils/reverseGeocode'
 import { customerApi, type CreateAddressPayload } from '../api/customerApi'
 
 const emptyForm: CreateAddressPayload = {
@@ -68,6 +69,7 @@ export function CustomerAddressesPage() {
   const [formError, setFormError] = useState<string | null>(null)
   const [pinError, setPinError] = useState<string | null>(null)
   const [pinningId, setPinningId] = useState<string | null>(null)
+  const [locating, setLocating] = useState(false)
 
   const listQuery = useQuery({
     queryKey: ['customer', 'addresses'],
@@ -126,6 +128,10 @@ export function CustomerAddressesPage() {
       setFormError(t('fieldRequired'))
       return
     }
+    if (form.postalCode.trim() && !/^\d{6}$/.test(form.postalCode.trim())) {
+      setFormError(`${t('postalCode')}: 6 digits`)
+      return
+    }
     createMutation.mutate({
       ...form,
       label: form.label.trim() || t('navHome'),
@@ -149,13 +155,39 @@ export function CustomerAddressesPage() {
     }
   }
 
-  const markPinOnCreateForm = async () => {
+  const fillFromCurrentLocation = async () => {
+    if (locating || createMutation.isPending) return
     setFormError(null)
+    setLocating(true)
     try {
-      const coords = await readCurrentPosition(t('somethingWentWrong'))
-      setForm((f) => ({ ...f, ...coords }))
+      const coords = await readCurrentPosition(t('couldNotReadAddress'))
+      const picked = await reverseGeocode(
+        Number(coords.latitude),
+        Number(coords.longitude),
+      )
+      if (
+        !picked.addressLine1 &&
+        !picked.area &&
+        !picked.city &&
+        !picked.state &&
+        !picked.postalCode
+      ) {
+        setFormError(t('couldNotReadAddress'))
+        return
+      }
+      setForm((f) => ({
+        ...f,
+        ...coords,
+        ...(picked.addressLine1 ? { addressLine1: picked.addressLine1 } : {}),
+        ...(picked.area ? { area: picked.area } : {}),
+        ...(picked.city ? { city: picked.city } : {}),
+        ...(picked.state ? { state: picked.state } : {}),
+        ...(picked.postalCode ? { postalCode: picked.postalCode } : {}),
+      }))
     } catch (error) {
-      setFormError((error as Error).message)
+      setFormError((error as Error).message || t('couldNotReadAddress'))
+    } finally {
+      setLocating(false)
     }
   }
 
@@ -300,6 +332,15 @@ export function CustomerAddressesPage() {
               onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))}
               fullWidth
             />
+            <Button
+              variant="outlined"
+              startIcon={<MyLocationOutlined />}
+              onClick={() => void fillFromCurrentLocation()}
+              disabled={locating || createMutation.isPending}
+              sx={{ alignSelf: 'flex-start' }}
+            >
+              {locating ? t('findingAddress') : t('pickCurrentAddress')}
+            </Button>
             <TextField
               label={t('address')}
               placeholder={t('address')}
@@ -368,11 +409,10 @@ export function CustomerAddressesPage() {
               <Button
                 variant="outlined"
                 startIcon={<MyLocationOutlined />}
-                onClick={() => void markPinOnCreateForm()}
+                onClick={() => void fillFromCurrentLocation()}
+                disabled={locating || createMutation.isPending}
               >
-                {form.latitude && form.longitude
-                  ? `${t('update')} ${t('map')}`
-                  : t('map')}
+                {locating ? t('findingAddress') : t('pickCurrentAddress')}
               </Button>
             </Stack>
             <Button

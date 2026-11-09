@@ -49,6 +49,21 @@ import type {
 const MILK_TYPES: MilkType[] = ['COW', 'BUFFALO', 'MIXED', 'TONED', 'OTHER']
 const SHIFTS: DeliveryShift[] = ['MORNING', 'AFTERNOON', 'EVENING']
 
+function milkTypeLabelKey(type: MilkType): string {
+  switch (type) {
+    case 'COW':
+      return 'cow'
+    case 'BUFFALO':
+      return 'buffalo'
+    case 'MIXED':
+      return 'mixed'
+    case 'TONED':
+      return 'toned'
+    case 'OTHER':
+      return 'milkTypeOther'
+  }
+}
+
 function deliveryShiftKey(shift: DeliveryShift) {
   return shift.toLowerCase()
 }
@@ -190,7 +205,12 @@ export function FarmProductsPage() {
   }
 
   const onSave = () => {
-    if (!form.name.trim() || !form.currentRatePerLitre.trim() || !form.minimumQuantity.trim()) {
+    const needsName = form.milkType === 'OTHER'
+    if (
+      (needsName && !form.name.trim()) ||
+      !form.currentRatePerLitre.trim() ||
+      !form.minimumQuantity.trim()
+    ) {
       setFormError(t('fieldRequired'))
       return
     }
@@ -223,7 +243,7 @@ export function FarmProductsPage() {
     }
     if (editing) {
       const payload: UpdateProductPayload = {
-        name: form.name.trim(),
+        ...(needsName ? { name: form.name.trim() } : {}),
         milkType: form.milkType,
         description: form.description.trim() || undefined,
         minimumQuantity: form.minimumQuantity.trim(),
@@ -233,7 +253,7 @@ export function FarmProductsPage() {
       updateMutation.mutate(payload)
     } else {
       const payload: CreateProductPayload = {
-        name: form.name.trim(),
+        ...(needsName ? { name: form.name.trim() } : {}),
         milkType: form.milkType,
         description: form.description.trim() || undefined,
         currentRatePerLitre: form.currentRatePerLitre.trim(),
@@ -293,7 +313,11 @@ export function FarmProductsPage() {
                 >
                   <Box>
                     <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-                      <Typography fontWeight={700}>{product.name}</Typography>
+                      <Typography fontWeight={700}>
+                        {product.milkType === 'OTHER'
+                          ? product.name
+                          : t(milkTypeLabelKey(product.milkType))}
+                      </Typography>
                       <StatusChip status={product.isAvailable ? 'ACTIVE' : 'INACTIVE'} />
                     </Stack>
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
@@ -367,25 +391,33 @@ export function FarmProductsPage() {
           <Stack spacing={2} sx={{ mt: 1 }}>
             {formError ? <Alert severity="error">{formError}</Alert> : null}
             <TextField
-              label={`${t('products')} ${t('name')}`}
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              fullWidth
-              required
-            />
-            <TextField
               select
               label={t('milkType')}
               value={form.milkType}
-              onChange={(e) => setForm((f) => ({ ...f, milkType: e.target.value as MilkType }))}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  milkType: e.target.value as MilkType,
+                  name: e.target.value === 'OTHER' ? f.name : '',
+                }))
+              }
               fullWidth
             >
               {MILK_TYPES.map((type) => (
                 <MenuItem key={type} value={type}>
-                  {type}
+                  {t(milkTypeLabelKey(type))}
                 </MenuItem>
               ))}
             </TextField>
+            {form.milkType === 'OTHER' ? (
+              <TextField
+                label={`${t('products')} ${t('name')}`}
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                fullWidth
+                required
+              />
+            ) : null}
             <TextField
               label={t('details')}
               value={form.description}

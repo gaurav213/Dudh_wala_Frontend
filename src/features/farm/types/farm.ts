@@ -104,6 +104,7 @@ export interface FarmDashboard {
     hasServiceArea: boolean
     hasProduct: boolean
     hasStaff: boolean
+    hasPhotos?: boolean
     profileComplete: boolean
   }
 }
@@ -152,7 +153,8 @@ export interface FarmProduct {
 }
 
 export interface CreateProductPayload {
-  name: string
+  /** Required only when milkType is OTHER. */
+  name?: string
   milkType: MilkType
   description?: string
   currentRatePerLitre: string

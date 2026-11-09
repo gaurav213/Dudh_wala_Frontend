@@ -38,6 +38,49 @@ export async function getMyFarmId(): Promise<string | null> {
   return active?.id ?? null
 }
 
+export interface DairySlip {
+  id: string
+  dairyName: string
+  slipDate: string
+  litres: string
+  rate: string
+  amount: string
+  fatPercent: string | null
+}
+
+export interface DairyPayment {
+  id: string
+  dairyName: string
+  amount: string
+  paidOn: string
+  note: string | null
+}
+
+export interface DairySummary {
+  month: string
+  todaySold: string
+  monthSold: string
+  monthReceived: string
+  monthDue: string
+  dairies: { dairyName: string; sold: string; received: string; due: string }[]
+}
+
+export interface CreateDairySlipPayload {
+  dairyName: string
+  slipDate: string
+  litres: string
+  rate: string
+  amount?: string
+  fatPercent?: string
+}
+
+export interface CreateDairyPaymentPayload {
+  dairyName: string
+  amount: string
+  paidOn: string
+  note?: string
+}
+
 export const farmApi = {
   myFarms() {
     return apiGet<Farm[]>('/farms/my')
@@ -64,10 +107,10 @@ export const farmApi = {
   listMedia(farmId: string) {
     return apiGet<{ id: string; url: string; sortOrder: number }[]>(`/farms/${farmId}/media`)
   },
-  async uploadMedia(farmId: string, photo: File) {
+  async uploadMedia(farmId: string, photos: File[]) {
     const form = new FormData()
-    form.append('photo', photo)
-    const { data } = await apiClient.post<{ data: { id: string; url: string; sortOrder: number } }>(
+    for (const photo of photos) form.append('photo', photo)
+    const { data } = await apiClient.post<{ data: { id: string; url: string; sortOrder: number }[] }>(
       `/farms/${farmId}/media`,
       form,
       { headers: { 'Content-Type': undefined } },
@@ -232,6 +275,22 @@ export const farmApi = {
       customer: unknown
       subscription: unknown
     }>(`/farms/${farmId}/customers/managed`, payload)
+  },
+
+  dairySummary(farmId: string, month: string) {
+    return apiGet<DairySummary>(`/farms/${farmId}/dairy-summary`, { month })
+  },
+  dairySlips(farmId: string, month: string) {
+    return apiGet<DairySlip[]>(`/farms/${farmId}/dairy-slips`, { month })
+  },
+  dairyPayments(farmId: string, month: string) {
+    return apiGet<DairyPayment[]>(`/farms/${farmId}/dairy-payments`, { month })
+  },
+  createDairySlip(farmId: string, payload: CreateDairySlipPayload) {
+    return apiPost<DairySlip>(`/farms/${farmId}/dairy-slips`, payload)
+  },
+  createDairyPayment(farmId: string, payload: CreateDairyPaymentPayload) {
+    return apiPost<unknown>(`/farms/${farmId}/dairy-payments`, payload)
   },
 }
 

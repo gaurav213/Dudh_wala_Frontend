@@ -1,4 +1,5 @@
 import {
+  CheckCircle,
   PeopleOutline,
   RadioButtonUnchecked,
   StorefrontOutlined,
@@ -39,12 +40,30 @@ import { DELIVERY_STAFF_ENABLED } from '../../../config/featureFlags'
 import { useAuth } from '../../../lib/auth/useAuth'
 import { formatCurrency, formatDate, formatLiters } from '../../../utils/format'
 import { farmApi } from '../api/farmApi'
+import { useMyFarm } from '../hooks/useMyFarm'
 
 function dateIso(d: Date) {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
+}
+
+/** First incomplete required setup path; photos are optional. */
+function nextFarmSetupPath(
+  checklist: {
+    profileComplete: boolean
+    hasServiceArea: boolean
+    hasProduct: boolean
+    isApproved: boolean
+  },
+  profileDone: boolean,
+): string | null {
+  if (!profileDone) return '/farm/profile'
+  if (!checklist.hasServiceArea) return '/farm/service-areas'
+  if (!checklist.hasProduct) return '/farm/products'
+  if (!checklist.isApproved) return '/farm/profile'
+  return null
 }
 
 function StatCard({
@@ -94,6 +113,7 @@ interface ChecklistItem {
 export function FarmDashboardPage() {
   const { t } = useTranslation()
   const { user } = useAuth()
+  const { farm: myFarm } = useMyFarm()
   const todayIso = useMemo(() => dateIso(new Date()), [])
   const yesterdayIso = useMemo(() => {
     const d = new Date()
@@ -179,6 +199,12 @@ export function FarmDashboardPage() {
     queryKey: ['farm', 'dashboard', 'today-metrics', fromDate, toDate],
     queryFn: () => farmApi.farmTodayMetrics({ from: fromDate, to: toDate }),
     retry: 1,
+  })
+  const farmId = dashboardQuery.data?.farm.id
+  const mediaQuery = useQuery({
+    queryKey: ['farm', farmId, 'media'],
+    queryFn: () => farmApi.listMedia(farmId!),
+    enabled: Boolean(farmId),
   })
 
   if (dashboardQuery.isLoading) return <LoadingState label={t('loading')} />
@@ -271,6 +297,10 @@ export function FarmDashboardPage() {
       to: '/farm/today',
     },
   ]
+  const leftoverSetup = checklist.filter(
+    (item) =>
+      !item.done && !['profile', 'serviceArea', 'product', 'rate'].includes(item.key),
+  )
 
   const primaryActions = [
     {
@@ -302,6 +332,12 @@ export function FarmDashboardPage() {
     },
   ]
 
+  const profileDone =
+    onboardingChecklist.profileComplete ||
+    Boolean(myFarm?.businessName?.trim() && myFarm?.description?.trim())
+  const nextSetupPath = nextFarmSetupPath(onboardingChecklist, profileDone)
+  const profilePercent = profileDone ? 100 : dashboard.profileCompletionPercent
+
   return (
     <Box>
       <PageHeader
@@ -309,10 +345,108 @@ export function FarmDashboardPage() {
         subtitle={`${farm.name} · ${t('farmConsole')}`}
       />
 
+      {nextSetupPath ? (
+        <Typography
+          component={RouterLink}
+          to={nextSetupPath}
+          variant="body2"
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 0.5,
+            mb: 2,
+            fontWeight: 600,
+            color: 'primary.main',
+            textDecoration: 'underline',
+            textUnderlineOffset: 3,
+          }}
+        >
+          {t('profilePercentComplete', { percent: profilePercent })}
+          {' · '}
+          {t('next')}
+        </Typography>
+      ) : (
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          {t('profilePercentComplete', { percent: profilePercent })}
+        </Typography>
+      )}
+
       {!onboardingChecklist.isApproved ? (
         <Alert severity="warning" sx={{ mb: 3 }}>
           {t('pending')} · {t('farmProfile')}, {t('serviceAreas')}, {t('products')}
         </Alert>
+      ) : null}
+
+      {nextSetupPath ? (
+        <Card variant="outlined" sx={{ mb: 3 }}>
+          <CardContent>
+            <Typography fontWeight={800} sx={{ mb: 0.5 }}>
+              {t('getSetUp')}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+              {t('farmSetupUntilLive')}
+            </Typography>
+            <List dense disablePadding>
+              {(
+                [
+                  {
+                    done:
+                      onboardingChecklist.profileComplete ||
+                      Boolean(
+                        myFarm?.businessName?.trim() && myFarm?.description?.trim(),
+                      ),
+                    label: `1. ${t('completeYourProfile')}`,
+                    hint: t('profileChecklistSubtitle'),
+                    to: '/farm/profile',
+                  },
+                  {
+                    done:
+                      Boolean(onboardingChecklist.hasPhotos) ||
+                      (mediaQuery.data?.length ?? 0) > 0,
+                    label: `2. ${t('farmSetupAddPhotos')}`,
+                    hint: t('farmSetupAddPhotosHint'),
+                    to: '/farm/profile',
+                  },
+                  {
+                    done: onboardingChecklist.hasServiceArea,
+                    label: `3. ${t('addServiceArea')}`,
+                    hint: t('soCustomersCanFindYou'),
+                    to: '/farm/service-areas',
+                  },
+                  {
+                    done: onboardingChecklist.hasProduct,
+                    label: `4. ${t('addMilkProduct')}`,
+                    hint: t('setRateAndMinQty'),
+                    to: '/farm/products',
+                  },
+                  ...(!onboardingChecklist.isApproved
+                    ? [
+                        {
+                          done: false,
+                          label: `5. ${t('farmApproved')}`,
+                          hint: t('waitingPlatformApproval'),
+                          to: '/farm/profile',
+                        },
+                      ]
+                    : []),
+                ] as const
+              ).map((step) => (
+                <ListItem key={step.label} disablePadding>
+                  <ListItemButton component={RouterLink} to={step.to} sx={{ borderRadius: 1 }}>
+                    <ListItemIcon sx={{ minWidth: 36 }}>
+                      {step.done ? (
+                        <CheckCircle fontSize="small" color="success" />
+                      ) : (
+                        <RadioButtonUnchecked fontSize="small" color="disabled" />
+                      )}
+                    </ListItemIcon>
+                    <ListItemText primary={step.label} secondary={step.hint} />
+                  </ListItemButton>
+                </ListItem>
+              ))}
+            </List>
+          </CardContent>
+        </Card>
       ) : null}
 
       <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 0.5 }}>
@@ -644,7 +778,7 @@ export function FarmDashboardPage() {
         </Grid>
       </Grid>
 
-      {checklist.some((item) => !item.done) ? (
+      {leftoverSetup.length ? (
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, md: 6 }}>
           <Card variant="outlined">
@@ -653,9 +787,7 @@ export function FarmDashboardPage() {
                 {t('settings')}
               </Typography>
               <List dense disablePadding>
-                {checklist
-                  .filter((item) => !item.done)
-                  .map((item) => (
+                {leftoverSetup.map((item) => (
                   <ListItem key={item.key} disablePadding>
                     <ListItemButton component={RouterLink} to={item.to} sx={{ borderRadius: 1 }}>
                       <ListItemIcon sx={{ minWidth: 36 }}>

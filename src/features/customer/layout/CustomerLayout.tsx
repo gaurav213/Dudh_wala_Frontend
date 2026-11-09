@@ -29,6 +29,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, Outlet } from 'react-router-dom'
 import { BrandLogo } from '../../../components/brand/BrandLogo'
+import { NotificationBell } from '../../notifications/NotificationBell'
 import { appBrand } from '../../../branding/appBrand'
 import { useAuth } from '../../../lib/auth/useAuth'
 import { confirmLogout } from '../../../lib/auth/confirmLogout'
@@ -141,6 +142,7 @@ export function CustomerLayout() {
           <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 600 }}>
             {t('customerShellTitle')}
           </Typography>
+          <NotificationBell />
         </Toolbar>
       </AppBar>
 

@@ -32,6 +32,7 @@ import { DeliveryTodayPage } from '../features/delivery/pages/DeliveryTodayPage'
 import { FarmConnectedCustomersPage } from '../features/farm/pages/FarmConnectedCustomersPage'
 import { FarmCustomerInvitationsPage } from '../features/farm/pages/FarmCustomerInvitationsPage'
 import { FarmDashboardPage } from '../features/farm/pages/FarmDashboardPage'
+import { FarmDairySalesPage } from '../features/farm/pages/FarmDairySalesPage'
 import { FarmProductsPage } from '../features/farm/pages/FarmProductsPage'
 import { FarmProfilePage } from '../features/farm/pages/FarmProfilePage'
 import { FarmServiceAreasPage } from '../features/farm/pages/FarmServiceAreasPage'
@@ -110,6 +111,7 @@ export function AppRouter() {
               <Route path="reports/outstanding" element={<OutstandingReportPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="farm" element={<FarmDashboardPage />} />
+              <Route path="farm/dairy-sales" element={<FarmDairySalesPage />} />
               <Route path="farm/profile" element={<FarmProfilePage />} />
               <Route path="farm/service-areas" element={<FarmServiceAreasPage />} />
               <Route path="farm/products" element={<FarmProductsPage />} />

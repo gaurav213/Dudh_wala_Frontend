@@ -8,11 +8,12 @@ describe('formatQuantity', () => {
     expect(formatQuantity(0)).toBe('0')
   })
 
-  it('keeps a single decimal place', () => {
+  it('keeps billed precision without trailing zeros', () => {
     expect(formatQuantity(1.5)).toBe('1.5')
     expect(formatQuantity('1.50')).toBe('1.5')
     expect(formatQuantity('0.500')).toBe('0.5')
-    expect(formatQuantity(1.25)).toBe('1.3')
+    expect(formatQuantity(1.25)).toBe('1.25')
+    expect(formatQuantity('2.345')).toBe('2.345')
   })
 
   it('handles empty values', () => {

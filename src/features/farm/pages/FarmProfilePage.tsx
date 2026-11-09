@@ -20,6 +20,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { ErrorState } from '../../../components/feedback/ErrorState'
 import { LoadingState } from '../../../components/feedback/LoadingState'
 import { PageHeader, StatusChip } from '../../../components/tables/DataTable'
@@ -51,6 +52,7 @@ const emptyForm: UpdateFarmPayload = {
 
 export function FarmProfilePage() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { farm, farmId, isLoading, isError, error, refetch } = useMyFarm()
   const [editOpen, setEditOpen] = useState(false)
@@ -94,10 +96,11 @@ export function FarmProfilePage() {
 
   const updateMutation = useMutation({
     mutationFn: (payload: UpdateFarmPayload) => farmApi.updateFarm(farmId!, payload),
-    onSuccess: () => {
-      invalidate()
+    onSuccess: async () => {
+      await refreshQueries(queryClient, [['farm', 'dashboard'], ['farm', 'my']])
       setEditOpen(false)
       setFormError(null)
+      navigate('/farm')
     },
     onError: (err) => setFormError(isApiError(err) ? err.message : t('somethingWentWrong')),
   })
@@ -119,10 +122,11 @@ export function FarmProfilePage() {
   })
 
   const uploadMediaMutation = useMutation({
-    mutationFn: (file: File) => farmApi.uploadMedia(farmId!, file),
+    mutationFn: (files: File[]) => farmApi.uploadMedia(farmId!, files),
     onSuccess: async () => {
       setMediaError(null)
       await refreshMedia()
+      await refreshQueries(queryClient, [['farm', 'dashboard']])
     },
     onError: (err) =>
       setMediaError(isApiError(err) ? err.message : t('somethingWentWrong')),
@@ -306,11 +310,14 @@ export function FarmProfilePage() {
               ref={fileInputRef}
               type="file"
               accept="image/*"
+              multiple
               hidden
               onChange={(e) => {
-                const file = e.target.files?.[0]
+                const files = [...(e.target.files ?? [])]
                 e.target.value = ''
-                if (file) uploadMediaMutation.mutate(file)
+                const remaining = MAX_FARM_PHOTOS - (mediaQuery.data?.length ?? 0)
+                const batch = files.slice(0, remaining)
+                if (batch.length > 0) uploadMediaMutation.mutate(batch)
               }}
             />
           </Stack>

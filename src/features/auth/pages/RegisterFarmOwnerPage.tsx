@@ -8,6 +8,7 @@ import { FormTextField } from '../../../components/forms/FormFields'
 import { useAuth } from '../../../lib/auth/useAuth'
 import { friendlyAuthError } from '../../../lib/api/errors'
 import { authApi } from '../api/authApi'
+import { reverseGeocode } from '../../../utils/reverseGeocode'
 import { AuthShell } from '../components/AuthShell'
 import {
   registerFarmOwnerSchema,
@@ -21,9 +22,11 @@ export function RegisterFarmOwnerPage() {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const schema = useMemo(() => registerFarmOwnerSchema(t), [t])
 
+  const [locating, setLocating] = useState(false)
   const {
     control,
     handleSubmit,
+    setValue,
     formState: { isSubmitting },
   } = useForm<RegisterFarmOwnerFormValues>({
     resolver: zodResolver(schema),
@@ -43,6 +46,43 @@ export function RegisterFarmOwnerPage() {
 
   if (!isBootstrapping && isAuthenticated) {
     return <Navigate to="/" replace />
+  }
+
+  const pickCurrentAddress = async () => {
+    if (locating || isSubmitting) return
+    if (!navigator.geolocation) {
+      setSubmitError(t('couldNotReadAddress'))
+      return
+    }
+    setSubmitError(null)
+    setLocating(true)
+    try {
+      const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 12000,
+        })
+      })
+      const picked = await reverseGeocode(pos.coords.latitude, pos.coords.longitude)
+      if (picked.addressLine1) setValue('addressLine1', picked.addressLine1, { shouldDirty: true })
+      if (picked.area) setValue('area', picked.area, { shouldDirty: true })
+      if (picked.city) setValue('city', picked.city, { shouldDirty: true })
+      if (picked.state) setValue('state', picked.state, { shouldDirty: true })
+      if (picked.postalCode) setValue('postalCode', picked.postalCode, { shouldDirty: true })
+      if (
+        !picked.addressLine1 &&
+        !picked.area &&
+        !picked.city &&
+        !picked.state &&
+        !picked.postalCode
+      ) {
+        setSubmitError(t('couldNotReadAddress'))
+      }
+    } catch {
+      setSubmitError(t('couldNotReadAddress'))
+    } finally {
+      setLocating(false)
+    }
   }
 
   const onSubmit = handleSubmit(async (values) => {
@@ -103,9 +143,17 @@ export function RegisterFarmOwnerPage() {
             label={`${t('name')} (${t('optional')})`}
             fullWidth
           />
+          <Button
+            type="button"
+            variant="outlined"
+            onClick={() => void pickCurrentAddress()}
+            disabled={locating || isSubmitting}
+          >
+            {locating ? t('findingAddress') : t('pickCurrentAddress')}
+          </Button>
           <FormTextField name="addressLine1" control={control} label={t('address')} fullWidth required />
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <FormTextField name="area" control={control} label={t('address')} fullWidth required />
+            <FormTextField name="area" control={control} label={t('areaName')} fullWidth required />
             <FormTextField name="city" control={control} label={t('city')} fullWidth required />
           </Stack>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
@@ -118,7 +166,7 @@ export function RegisterFarmOwnerPage() {
               required
             />
           </Stack>
-          <Button type="submit" variant="contained" size="large" disabled={isSubmitting} fullWidth>
+          <Button type="submit" variant="contained" size="large" disabled={isSubmitting || locating} fullWidth>
             {isSubmitting ? t('registering') : t('createAccount')}
           </Button>
           <Typography variant="body2" color="text.secondary" textAlign="center">

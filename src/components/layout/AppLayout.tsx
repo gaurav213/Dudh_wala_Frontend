@@ -43,7 +43,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { BrandLogo } from '../brand/BrandLogo'
 import { appBrand } from '../../branding/appBrand'
 import { farmApi } from '../../features/farm/api/farmApi'
-import { notificationsApi } from '../../features/notifications/api/notificationsApi'
+import { NotificationBell } from '../../features/notifications/NotificationBell'
 import { useAuth } from '../../lib/auth/useAuth'
 import { confirmLogout } from '../../lib/auth/confirmLogout'
 
@@ -71,22 +71,15 @@ export function AppLayout() {
     enabled: user?.role === 'FARM_OWNER',
     refetchInterval: 30_000,
   })
-  const unreadQuery = useQuery({
-    queryKey: ['notifications', 'unread-count'],
-    queryFn: async () => (await notificationsApi.unreadCount()).count,
-    enabled: Boolean(user),
-    refetchInterval: 20_000,
-  })
 
   const pendingRequests = dashboardQuery.data?.counts.pendingServiceRequests ?? 0
-  const unread = unreadQuery.data ?? 0
-  const bellCount = Math.max(unread, pendingRequests)
 
   const filtered = useMemo<NavItem[]>(() => {
     if (user?.role === 'FARM_OWNER') {
       return [
         { to: '/farm/today', label: t('navTodaysDeliveries'), icon: <LocalShippingOutlined /> },
         { to: '/farm', label: t('navDashboard'), icon: <DashboardOutlined />, end: true },
+        { to: '/farm/dairy-sales', label: t('navDairySales'), icon: <ReceiptLongOutlined /> },
         { to: '/farm/profile', label: t('navFarmProfile'), icon: <BadgeOutlined /> },
         { to: '/farm/service-areas', label: t('navServiceAreas'), icon: <LocationOnOutlined /> },
         { to: '/farm/products', label: t('navProducts'), icon: <OpacityOutlined /> },
@@ -224,11 +217,7 @@ export function AppLayout() {
           <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 600 }}>
             {t('appTitle')}
           </Typography>
-          {bellCount > 0 ? (
-            <Badge badgeContent={bellCount} color="error" sx={{ mr: 2 }}>
-              <Typography variant="body2">{t('notifications')}</Typography>
-            </Badge>
-          ) : null}
+          <NotificationBell extraCount={user?.role === 'FARM_OWNER' ? pendingRequests : 0} />
           <Button color="inherit" onClick={() => navigate('/settings')} size="small">
             {user?.role}
           </Button>

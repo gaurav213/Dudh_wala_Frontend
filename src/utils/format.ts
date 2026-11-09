@@ -6,16 +6,12 @@ export function formatCurrency(amount: number | string, currency = 'INR'): strin
   }).format(Number(amount))
 }
 
-/** Quantity display: whole numbers as `1`, halves as `0.5` (never `1.000`). */
+/** Quantity display: `1`, `0.5`, `2.345` (never `1.000`; never rounds away billed litres). */
 export function formatQuantity(value?: number | string | null): string {
   if (value === undefined || value === null || value === '') return '—'
   const n = Number(String(value).trim().replace(',', '.'))
   if (!Number.isFinite(n)) return String(value)
-  const rounded = Math.round(n * 10) / 10
-  if (Math.abs(rounded - Math.round(rounded)) < 1e-9) {
-    return String(Math.round(rounded))
-  }
-  return rounded.toFixed(1)
+  return String(Number(n.toFixed(3)))
 }
 
 export function formatLiters(value?: number | string | null): string {

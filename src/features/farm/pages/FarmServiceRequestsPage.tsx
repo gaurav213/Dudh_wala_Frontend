@@ -179,7 +179,7 @@ export function FarmServiceRequestsPage() {
                   {productLabel} · {formatLiters(request.quantity)} · {t(scheduleKey(request.scheduleType))}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {isPending ? t('requests') : t('accept')} {formatDate(request.createdAt)}
+                  {isPending ? t('requests') : t('statusAccepted')} {formatDate(request.createdAt)}
                 </Typography>
               </Box>
             </Stack>
@@ -220,7 +220,7 @@ export function FarmServiceRequestsPage() {
     <Box>
       <PageHeader
         title={t('navCustomerRequests')}
-        subtitle={`${t('pending')} · ${t('approve')}`}
+        subtitle={`${t('pending')} · ${t('statusAccepted')}`}
       />
 
       {requests.length === 0 ? (
@@ -241,7 +241,7 @@ export function FarmServiceRequestsPage() {
           {accepted.length > 0 ? (
             <Box>
               <Typography fontWeight={800} color="success.main" sx={{ mb: 1 }}>
-                {t('approve')} ({accepted.length})
+                {t('statusAccepted')} ({accepted.length})
               </Typography>
               <Stack spacing={2}>{accepted.map(renderCard)}</Stack>
             </Box>

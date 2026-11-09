@@ -37,6 +37,8 @@ export function CustomerServiceRequestsPage() {
   const query = useQuery({
     queryKey: ['customer', 'service-requests'],
     queryFn: () => customerApi.myServiceRequests({ limit: 50 }),
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 
   const invitationsQuery = useQuery({
